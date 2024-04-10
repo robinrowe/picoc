@@ -14,8 +14,8 @@ void LibraryInit(Picoc *pc)
 {
 
     /* define the version number macro */
-    pc->VersionString = TableStrRegister(pc, PICOC_VERSION);
-    VariableDefinePlatformVar(pc, NULL, "PICOC_VERSION", pc->CharPtrType,
+    pc->VersionString = TableStrRegister(pc, PROGRAM_VERSION);
+    VariableDefinePlatformVar(pc, NULL, "PROGRAM_VERSION", pc->CharPtrType,
         (union AnyValue*)&pc->VersionString, false);
 
     /* define endian-ness macros */

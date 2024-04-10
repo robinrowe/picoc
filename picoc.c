@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     Picoc pc;
 
     if (argc < 2 || strcmp(argv[ParamCount], "-h") == 0) {
-        printf(PICOC_VERSION "  \n"
+        printf(PROGRAM_VERSION "  \n"
                "Format:\n\n"
                "> picoc <file1.c>... [- <arg1>...]    : run a program, calls main() as the entry point\n"
                "> picoc -s <file1.c>... [- <arg1>...] : run a script, runs the program without calling main()\n"

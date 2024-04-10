@@ -61,9 +61,12 @@
 #define LINEBUFFER_MAX (256)                  /* maximum number of characters on a line */
 #define LOCAL_TABLE_SIZE (11)                 /* size of local variable table (can expand) */
 #define STRUCT_TABLE_SIZE (11)                /* size of struct/union member table (can expand) */
-
-#define INTERACTIVE_PROMPT_START "starting picoc " PICOC_VERSION " (Ctrl+D to exit)\n"
-#define INTERACTIVE_PROMPT_STATEMENT "picoc> "
+#ifdef _WIN32
+#define INTERACTIVE_PROMPT_START "starting " PROGRAM_NAME " " PROGRAM_VERSION " (Ctrl+C to quit)\n"
+#else
+#define INTERACTIVE_PROMPT_START "starting " PROGRAM_NAME " " PROGRAM_VERSION " (Ctrl+D to quit)\n"
+#endif
+#define INTERACTIVE_PROMPT_STATEMENT "> "
 #define INTERACTIVE_PROMPT_LINE "     > "
 
 extern jmp_buf ExitBuf;

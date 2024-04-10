@@ -1,7 +1,11 @@
 /*  */
 #include <fcntl.h>
 #include <limits.h>
-
+#include <unistd.h>
+#include <stdlib.h> // has #define _MAX_PATH 260
+#ifdef _WIN32
+#define PATH_MAX _MAX_PATH
+#endif
 #include "../interpreter.h"
 
 
@@ -353,7 +357,7 @@ void UnistdSetpgid(struct ParseState *Parser, struct Value *ReturnValue,
 void UnistdSetpgrp(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
 {
-    ReturnValue->Val->Integer = setpgrp();
+    ReturnValue->Val->Integer = setpgrp(0,0);//bug
 }
 
 void UnistdSetregid(struct ParseState *Parser, struct Value *ReturnValue,
@@ -585,7 +589,7 @@ struct LibraryFunction UnistdFunctions[] =
 };
 
 /* creates various system-dependent definitions */
-extern char *optarg;
+extern const char *optarg;
 extern int optind, opterr, optopt;
 void UnistdSetupFunc(Picoc *pc)
 {

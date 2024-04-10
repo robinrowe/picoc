@@ -1,5 +1,3 @@
-Originally forked from https://github.com/zsaleeba/picoc
-
 # Description
 
 PicoC is a very small C interpreter for scripting. It was originally written
@@ -466,7 +464,7 @@ The old "K&R" form of function declaration is not supported.
 ## Predefined macros
 A few macros are pre-defined:
 
-* PICOC_VERSION - gives the picoc version as a string eg. "v2.1 beta r524"
+* PROGRAM_VERSION - gives the picoc version as a string eg. "v2.1 beta r524"
 
 ## Function pointers
 Pointers to functions are currently not supported.
@@ -499,3 +497,8 @@ Some discussion on this topic:
 
 * http://www.cprogramming.com/tutorial/goto.html
 * http://kerneltrap.org/node/553/2131
+
+## History
+
+* *2024/4/9 forked from https://github.com/jpoirier/picoc
+* *Originally forked from https://github.com/zsaleeba/picoc

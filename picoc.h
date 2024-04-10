@@ -9,8 +9,10 @@
 /* VER, the git hash number, and TAG are obtained via the Makefile */
 #define PICOC_VERSION TAG " r" VER
 #else
-#define PICOC_VERSION "v2.3.2"
+//#define PROGRAM_VERSION "v2.3.2"
+#define PROGRAM_VERSION "v2.4 rower"
 #endif
+#define PROGRAM_NAME "picoc"
 
 #include "interpreter.h"
 

@@ -1,7 +1,7 @@
 /* picoc lexer - converts source text into a tokenised form */
 
+#include "picoc.h"
 #include "interpreter.h"
-
 
 #define isCidstart(c) (isalpha(c) || (c)=='_' || (c)=='#')
 #define isCident(c) (isalnum(c) || (c)=='_')
@@ -756,7 +756,7 @@ enum LexToken LexGetRawToken(struct ParseState *Parser, struct Value **Value,
                     &pc->InteractiveTail->Tokens[pc->InteractiveTail->NumBytes-TOKEN_DATA_OFFSET]) {
                 /* get interactive input */
                 if (pc->LexUseStatementPrompt) {
-                    Prompt = INTERACTIVE_PROMPT_STATEMENT;
+                    Prompt = PROGRAM_NAME INTERACTIVE_PROMPT_STATEMENT;
                     pc->LexUseStatementPrompt = false;
                 } else
                     Prompt = INTERACTIVE_PROMPT_LINE;
