@@ -504,6 +504,11 @@ Some discussion on this topic:
 * 2024/4/9 forked from https://github.com/jpoirier/picoc
 * Originally forked from https://github.com/zsaleeba/picoc
 
+## Changes
+
+* 2024/4/8 Fixed a few compile-time errors after forking and built for Win64, works
+* 2024/4/8 New CMake build system created using Cmaker
+
 ## Project Manager
 
 * Robin.Rowe@CinePaint.org 323-535-0952
