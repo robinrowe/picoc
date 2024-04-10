@@ -500,5 +500,10 @@ Some discussion on this topic:
 
 ## History
 
-* *2024/4/9 forked from https://github.com/jpoirier/picoc
-* *Originally forked from https://github.com/zsaleeba/picoc
+* Latest at https://github.com/robinrowe/picoc
+* 2024/4/9 forked from https://github.com/jpoirier/picoc
+* Originally forked from https://github.com/zsaleeba/picoc
+
+## Project Manager
+
+* Robin.Rowe@CinePaint.org 323-535-0952
