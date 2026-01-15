@@ -559,8 +559,8 @@ extern int ExpressionParse(struct ParseState *Parser, struct Value **Result);
 extern long ExpressionParseInt(struct ParseState *Parser);
 extern void ExpressionAssign(struct ParseState *Parser, struct Value *DestValue,
     struct Value *SourceValue, int Force, const char *FuncName, int ParamNo, int AllowPointerCoercion);
-extern long ExpressionCoerceInteger(struct Value *Val);
-extern unsigned long ExpressionCoerceUnsignedInteger(struct Value *Val);
+extern intptr_t ExpressionCoerceInteger(struct Value *Val);
+extern uintptr_t ExpressionCoerceUnsignedInteger(struct Value *Val);
 extern double ExpressionCoerceFP(struct Value *Val);
 
 /* type.c */

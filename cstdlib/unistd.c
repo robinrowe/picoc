@@ -59,7 +59,7 @@ void UnistdConfstr(struct ParseState *Parser, struct Value *ReturnValue,
 void UnistdCtermid(struct ParseState *Parser, struct Value *ReturnValue,
     struct Value **Param, int NumArgs)
 {
-    ReturnValue->Val->Pointer = ctermid(Param[0]->Val->Pointer);
+    ReturnValue->Val->Pointer = (void*) ctermid(Param[0]->Val->Pointer);
 }
 
 #if 0

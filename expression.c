@@ -236,57 +236,57 @@ int IsTypeToken(struct ParseState *Parser, enum LexToken t,
     return 0;
 }
 
-long ExpressionCoerceInteger(struct Value *Val)
+intptr_t ExpressionCoerceInteger(struct Value *Val)
 {
     switch (Val->Typ->Base) {
     case TypeInt:
-        return (long)Val->Val->Integer;
+        return (intptr_t)Val->Val->Integer;
     case TypeChar:
-        return (long)Val->Val->Character;
+        return (intptr_t)Val->Val->Character;
     case TypeShort:
-        return (long)Val->Val->ShortInteger;
+        return (intptr_t)Val->Val->ShortInteger;
     case TypeLong:
-        return (long)Val->Val->LongInteger;
+        return (intptr_t)Val->Val->LongInteger;
     case TypeUnsignedInt:
-        return (long)Val->Val->UnsignedInteger;
+        return (intptr_t)Val->Val->UnsignedInteger;
     case TypeUnsignedShort:
-        return (long)Val->Val->UnsignedShortInteger;
+        return (intptr_t)Val->Val->UnsignedShortInteger;
     case TypeUnsignedLong:
-        return (long)Val->Val->UnsignedLongInteger;
+        return (intptr_t)Val->Val->UnsignedLongInteger;
     case TypeUnsignedChar:
-        return (long)Val->Val->UnsignedCharacter;
+        return (intptr_t)Val->Val->UnsignedCharacter;
     case TypePointer:
-        return (long)Val->Val->Pointer;
+        return (intptr_t)Val->Val->Pointer;
     case TypeFP:
-        return (long)Val->Val->FP;
+        return (intptr_t)Val->Val->FP;
     default:
         return 0;
     }
 }
 
-unsigned long ExpressionCoerceUnsignedInteger(struct Value *Val)
+uintptr_t ExpressionCoerceUnsignedInteger(struct Value *Val)
 {
     switch (Val->Typ->Base) {
     case TypeInt:
-        return (unsigned long)Val->Val->Integer;
+        return (uintptr_t)Val->Val->Integer;
     case TypeChar:
-        return (unsigned long)Val->Val->Character;
+        return (uintptr_t)Val->Val->Character;
     case TypeShort:
-        return (unsigned long)Val->Val->ShortInteger;
+        return (uintptr_t)Val->Val->ShortInteger;
     case TypeLong:
-        return (unsigned long)Val->Val->LongInteger;
+        return (uintptr_t)Val->Val->LongInteger;
     case TypeUnsignedInt:
-        return (unsigned long)Val->Val->UnsignedInteger;
+        return (uintptr_t)Val->Val->UnsignedInteger;
     case TypeUnsignedShort:
-        return (unsigned long)Val->Val->UnsignedShortInteger;
+        return (uintptr_t)Val->Val->UnsignedShortInteger;
     case TypeUnsignedLong:
-        return (unsigned long)Val->Val->UnsignedLongInteger;
+        return (uintptr_t)Val->Val->UnsignedLongInteger;
     case TypeUnsignedChar:
-        return (unsigned long)Val->Val->UnsignedCharacter;
+        return (uintptr_t)Val->Val->UnsignedCharacter;
     case TypePointer:
-        return (unsigned long)Val->Val->Pointer;
+        return (uintptr_t)Val->Val->Pointer;
     case TypeFP:
-        return (unsigned long)Val->Val->FP;
+        return (uintptr_t)Val->Val->FP;
     default:
         return 0;
     }
@@ -496,7 +496,7 @@ void ExpressionAssignToPointer(struct ParseState *Parser, struct Value *ToValue,
     } else if (AllowPointerCoercion && IS_NUMERIC_COERCIBLE(FromValue)) {
         /* assign integer to native pointer */
         ToValue->Val->Pointer =
-            (void*)(unsigned long)ExpressionCoerceUnsignedInteger(FromValue);
+            (void*)(uintptr_t)ExpressionCoerceUnsignedInteger(FromValue);
     } else if (AllowPointerCoercion && FromValue->Typ->Base == TypePointer) {
         /* assign a pointer to a pointer to a different type */
         ToValue->Val->Pointer = FromValue->Val->Pointer;
