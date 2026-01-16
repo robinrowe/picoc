@@ -10,7 +10,6 @@ build/*
 archives/
 
 trapc_patches/
-CMakeLists.txt
 picoc.plist
 picoc.config
 picoc.creator
