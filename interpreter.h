@@ -572,6 +572,9 @@ extern struct Value *ParseFunctionDefinition(struct ParseState *Parser,
 extern void ParseCleanup(Picoc *pc);
 extern void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 extern void ParserCopy(struct ParseState *To, struct ParseState *From);
+extern struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
+    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier);
+
 
 /* expression.c */
 extern int ExpressionParse(struct ParseState *Parser, struct Value **Result);

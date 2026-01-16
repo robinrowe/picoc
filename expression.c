@@ -1726,6 +1726,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
             enum LexToken token1 = LexGetToken(&PeekState, &MemberIdent, true);
             enum LexToken token2 = 0;
             enum LexToken token3 = 0;
+#if 0
             if (token1 == TokenDot)
             {   token2 = LexGetToken(&PeekState, NULL, true);
                 if(token2 == TokenIdentifier) 
@@ -1742,6 +1743,31 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 ExpressionParseFunctionCall(Parser, &StackTop,
                     LexValue->Val->Identifier,
                     Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
+#else
+    char FuncCallName[256];
+            if (token1 == TokenDot)
+            {   token2 = LexGetToken(&PeekState, &MemberIdent, true);
+                if(token2 == TokenIdentifier) 
+                {   token3 = LexGetToken(&PeekState, NULL, false);
+                    if(token3 == TokenOpenParen) 
+                    {   is_member_function_call = 1;
+                        /* Build "foo.hello" string to pass to function call */
+                        snprintf(FuncCallName, sizeof(FuncCallName), "%s.%s",
+                                LexValue->Val->Identifier, 
+                                MemberIdent->Val->Identifier);
+            }   }   }
+            if (token == TokenOpenParen || is_member_function_call ) {
+#ifdef VERBOSE
+                const char* type = is_member_function_call ? "member":"regular";
+                const char* name = is_member_function_call ? FuncCallName : LexValue->Val->Identifier;
+                fprintf(stderr, "DEBUG: It's a %s function call: %s\n", type, name);
+                fflush(stderr);
+#endif
+                ExpressionParseFunctionCall(Parser, &StackTop,
+                    is_member_function_call ? FuncCallName : LexValue->Val->Identifier,
+                    Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
+
+#endif
             } else {
 #ifdef VERBOSE
                 fprintf(stderr, "DEBUG: It's a variable: %s\n",LexValue->Val->Identifier);
@@ -1955,15 +1981,9 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
     struct Value *FuncValue = NULL;
     struct Value *Param;
     struct Value **ParamArray = NULL;
-
-    if (RunIt) {
 #if 0
-        /* Check if this is a cached member function call first */
-        if (Parser->pc->MemberFunctionCache != NULL) {
-            FuncValue = Parser->pc->MemberFunctionCache;
-        } else 
-#endif 
-  
+    if (RunIt) {
+
         /* Check if this is a member function call first */
         if (Parser->pc->StructType != NULL) 
         {  FuncName = "Foo_hello";
@@ -1973,7 +1993,50 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
             /* get the function definition from variable tables */
             VariableGet(Parser->pc, Parser, FuncName, &FuncValue);
         }
+#else
+   if (RunIt) {
+        char MangledName[256];
+        const char *LookupName = FuncName;
+        
+        /* Check if FuncName contains a dot (member function call) */
+        const char *DotPos = strchr(FuncName, '.');
+        if (DotPos != NULL) {
+            /* It's a member function call like "foo.hello" */
+            /* Extract the variable name before the dot */
+            char VarName[128];
+            int VarNameLen = DotPos - FuncName;
+            if (VarNameLen >= sizeof(VarName))
+                ProgramFail(Parser, "member function variable name too long");
+            
+            strncpy(VarName, FuncName, VarNameLen);
+            VarName[VarNameLen] = '\0';
+            
+            /* Get the struct variable to find its type */
+            struct Value *StructVar;
+            VariableGet(Parser->pc, Parser, VarName, &StructVar);
+            
+            if (StructVar->Typ->Base != TypeStruct)
+                ProgramFail(Parser, "member functions can only be called on structs");
+            
+            /* Build mangled name: StructTypeName_MemberName */
+            /* "foo.hello" becomes "Foo_hello" */
+            const char *MemberName = DotPos + 1;
+            snprintf(MangledName, sizeof(MangledName), "%s_%s",
+                    StructVar->Typ->Identifier, MemberName);
+            LookupName = MangledName;
+            
+#ifdef VERBOSE
+            printf("DEBUG: Member call %s -> mangled to %s\n", FuncName, LookupName);
+#endif
+            
+            /* Push the struct variable as the first parameter */
+            ExpressionStackPushValue(Parser, StackTop, StructVar);
+        }
+        
+        /* get the function definition from variable tables */
+        VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
 
+#endif
         if (FuncValue->Typ->Base == TypeMacro) {
             /* this is actually a macro, not a function */
             ExpressionParseMacroCall(Parser, StackTop, FuncName,

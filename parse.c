@@ -186,6 +186,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     return FuncValue;
 }
 
+#if 0
 /* parse a member function definition inside a struct */
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
     struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier)
@@ -303,6 +304,27 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
 #endif
     return FuncValue;
 }
+#else
+
+struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser, 
+    struct ValueType *StructType, 
+    struct ValueType *ReturnType, 
+    char *MemberName)
+{
+    Picoc *pc = Parser->pc;
+    char MangledName[256];
+    
+    /* Create mangled name: StructName_MemberName */
+    snprintf(MangledName, sizeof(MangledName), "%s_%s", 
+             StructType->Identifier, MemberName);
+    
+    /* Register the mangled name in the string table */
+    char *RegisteredName = TableStrRegister(pc, MangledName);
+    
+    /* Parse as a regular global function with the mangled name */
+    return ParseFunctionDefinition(Parser, ReturnType, RegisteredName);
+}
+#endif
 
 /* parse an array initializer and assign to a variable */
 int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,
@@ -1052,3 +1074,4 @@ void PicocParseInteractive(Picoc *pc)
     PlatformPrintf(pc->CStdOut, INTERACTIVE_PROMPT_START);
     PicocParseInteractiveNoStartPrompt(pc, gEnableDebugger);
 }
+
