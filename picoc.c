@@ -64,7 +64,6 @@ int main(int argc, char **argv)
         if (!DontRunMain)
             PicocCallMain(&pc, argc - ParamCount, &argv[ParamCount]);
     }
-
     PicocCleanup(&pc);
     return pc.PicocExitValue;
 }

@@ -75,10 +75,10 @@ int ParseCountParams(struct ParseState *Parser)
 
 /* parse a function definition and store it for later */
 struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *Identifier)
+    struct ValueType *ReturnType, char *StructName)
 {
     int ParamCount = 0;
-    char *ParamIdentifier;
+    char *ParamStructName;
     enum LexToken Token = TokenNone;
     struct ValueType *ParamType;
     struct ParseState ParamParser;
@@ -120,14 +120,14 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
             break;
         } else {
             /* add a parameter */
-            TypeParse(&ParamParser, &ParamType, &ParamIdentifier, NULL);
+            TypeParse(&ParamParser, &ParamType, &ParamStructName, NULL);
             if (ParamType->Base == TypeVoid) {
                 /* this isn't a real parameter at all - delete it */
                 //ParamCount--;
                 FuncValue->Val->FuncDef.NumParams--;
             } else {
                 FuncValue->Val->FuncDef.ParamType[ParamCount] = ParamType;
-                FuncValue->Val->FuncDef.ParamName[ParamCount] = ParamIdentifier;
+                FuncValue->Val->FuncDef.ParamName[ParamCount] = ParamStructName;
             }
         }
 
@@ -140,7 +140,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
             Token != TokenComma && Token != TokenEllipsis)
         ProgramFail(&ParamParser, "bad parameter");
 
-    if (strcmp(Identifier, "main") == 0) {
+    if (strcmp(StructName, "main") == 0) {
         /* make sure it's int main() */
         if ( FuncValue->Val->FuncDef.ReturnType != &pc->IntType &&
              FuncValue->Val->FuncDef.ReturnType != &pc->VoidType )
@@ -170,28 +170,28 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
         FuncValue->Val->FuncDef.Body.Pos = LexCopyTokens(&FuncBody, Parser);
 
         /* is this function already in the global table? */
-        if (TableGet(&pc->GlobalTable, Identifier, &OldFuncValue, NULL, NULL, NULL)) {
+        if (TableGet(&pc->GlobalTable, StructName, &OldFuncValue, NULL, NULL, NULL)) {
             if (OldFuncValue->Val->FuncDef.Body.Pos == NULL) {
                 /* override an old function prototype */
-                VariableFree(pc, TableDelete(pc, &pc->GlobalTable, Identifier));
+                VariableFree(pc, TableDelete(pc, &pc->GlobalTable, StructName));
             } else
-                ProgramFail(Parser, "'%s' is already defined", Identifier);
+                ProgramFail(Parser, "'%s' is already defined", StructName);
         }
     }
 
-    if (!TableSet(pc, &pc->GlobalTable, Identifier, FuncValue,
+    if (!TableSet(pc, &pc->GlobalTable, StructName, FuncValue,
                 (char*)Parser->FileName, Parser->Line, Parser->CharacterPos))
-        ProgramFail(Parser, "'%s' is already defined", Identifier);
+        ProgramFail(Parser, "'%s' is already defined", StructName);
 
     return FuncValue;
 }
 
 /* parse a member function definition inside a struct */
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier)
+    struct ValueType *StructType, struct ValueType *ReturnType, char *StructName)
 {
     int ParamCount = 0;
-    char *ParamIdentifier;
+    char *ParamStructName;
     enum LexToken Token = TokenNone;
     struct ValueType *ParamType;
     struct ParseState ParamParser;
@@ -218,6 +218,7 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
     FuncValue->Val->FuncDef.ReturnType = ReturnType;
     FuncValue->Val->FuncDef.NumParams = ParamCount;
     FuncValue->Val->FuncDef.VarArgs = false;
+    FuncValue->Val->FuncDef.Intrinsic = NULL;  /* not an intrinsic function */
     FuncValue->Val->FuncDef.ParamType =
         (struct ValueType**)((char*)FuncValue->Val+sizeof(struct FuncDef));
     FuncValue->Val->FuncDef.ParamName =
@@ -235,13 +236,13 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
             break;
         } else {
             /* add a parameter */
-            TypeParse(&ParamParser, &ParamType, &ParamIdentifier, NULL);
+            TypeParse(&ParamParser, &ParamType, &ParamStructName, NULL);
             if (ParamType->Base == TypeVoid) {
                 /* this isn't a real parameter at all - delete it */
                 FuncValue->Val->FuncDef.NumParams--;
             } else {
                 FuncValue->Val->FuncDef.ParamType[ParamCount] = ParamType;
-                FuncValue->Val->FuncDef.ParamName[ParamCount] = ParamIdentifier;
+                FuncValue->Val->FuncDef.ParamName[ParamCount] = ParamStructName;
             }
         }
 
@@ -269,25 +270,37 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
 
         FuncValue->Val->FuncDef.Body = FuncBody;
         FuncValue->Val->FuncDef.Body.Pos = LexCopyTokens(&FuncBody, Parser);
-
+#if 0
         /* check if this member function is already defined */
         if (StructType->MemberFunctions != NULL &&
-            TableGet(StructType->MemberFunctions, Identifier, &OldFuncValue, NULL, NULL, NULL)) {
-            ProgramFail(Parser, "member function '%s' is already defined", Identifier);
+            TableGet(StructType->MemberFunctions, StructName, &OldFuncValue, NULL, NULL, NULL)) {
+            ProgramFail(Parser, "member function '%s' is already defined", StructName);
         }
+#endif
     }
-
+#if 0
     /* add to struct's MemberFunctions table */
     if (StructType->MemberFunctions == NULL) {
+        StructType->ThisPtr = HeapAllocMem(pc, sizeof(*StructType->ThisPtr));
+        if (StructType->ThisPtr == NULL)
+            ProgramFail(Parser, "out of memory");
+        /* Allocate the table structure and hash table array */
+        struct TableEntry **HashTable;
         StructType->MemberFunctions = HeapAllocMem(pc, sizeof(struct Table));
         if (StructType->MemberFunctions == NULL)
             ProgramFail(Parser, "out of memory");
-        TableInitTable(StructType->MemberFunctions, NULL, 0, true);
+        
+        /* Allocate hash table array */
+        HashTable = HeapAllocMem(pc, sizeof(struct TableEntry*) * MEMBER_FUNCTION_TABLE_SIZE);
+        if (HashTable == NULL)
+            ProgramFail(Parser, "out of memory");
+        
+        TableInitTable(StructType->MemberFunctions, HashTable, MEMBER_FUNCTION_TABLE_SIZE, true);
     }
 
-    TableSet(pc, StructType->MemberFunctions, Identifier, FuncValue,
+    TableSet(pc, StructType->MemberFunctions, StructName, FuncValue,
         (char*)Parser->FileName, Parser->Line, Parser->CharacterPos);
-
+#endif
     return FuncValue;
 }
 
@@ -314,7 +327,7 @@ int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,
         if (NewVariable->Typ->ArraySize == 0) {
             NewVariable->Typ = TypeGetMatching(Parser->pc, Parser,
                 NewVariable->Typ->FromType, NewVariable->Typ->Base, NumElements,
-                NewVariable->Typ->Identifier, true);
+                NewVariable->Typ->StructName, true);
             VariableRealloc(Parser, NewVariable, TypeSizeValue(NewVariable, false));
         }
 #ifdef DEBUG_ARRAY_INITIALIZER
@@ -443,7 +456,7 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
 {
     int IsStatic = false;
     int FirstVisit = false;
-    char *Identifier;
+    char *StructName;
     struct ValueType *BasicType;
     struct ValueType *Typ;
     struct Value *NewVariable = NULL;
@@ -451,25 +464,25 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
 
     TypeParseFront(Parser, &BasicType, &IsStatic);
     do {
-        TypeParseIdentPart(Parser, BasicType, &Typ, &Identifier);
+        TypeParseIdentPart(Parser, BasicType, &Typ, &StructName);
         if ((Token != TokenVoidType && Token != TokenStructType &&
                 Token != TokenUnionType && Token != TokenEnumType) &&
-                Identifier == pc->StrEmpty)
+                StructName == pc->StrEmpty)
             ProgramFail(Parser, "identifier expected");
 
-        if (Identifier != pc->StrEmpty) {
+        if (StructName != pc->StrEmpty) {
             /* handle function definitions */
             if (LexGetToken(Parser, NULL, false) == TokenOpenBracket)
             {
-                ParseFunctionDefinition(Parser, Typ, Identifier);
+                ParseFunctionDefinition(Parser, Typ, StructName);
                 return false;
             } else {
-                if (Typ == &pc->VoidType && Identifier != pc->StrEmpty)
+                if (Typ == &pc->VoidType && StructName != pc->StrEmpty)
                     ProgramFail(Parser, "can't define a void variable");
 
                 if (Parser->Mode == RunModeRun || Parser->Mode == RunModeGoto)
                     NewVariable = VariableDefineButIgnoreIdentical(Parser,
-                        Identifier, Typ, IsStatic, &FirstVisit);
+                        StructName, Typ, IsStatic, &FirstVisit);
 
                 if (LexGetToken(Parser, NULL, false) == TokenAssign) {
                     /* we're assigning an initial value */
@@ -496,10 +509,10 @@ void ParseMacroDefinition(struct ParseState *Parser)
     struct Value *ParamName;
     struct Value *MacroValue;
 
-    if (LexGetToken(Parser, &MacroName, true) != TokenIdentifier)
+    if (LexGetToken(Parser, &MacroName, true) != TokenStructName)
         ProgramFail(Parser, "identifier expected");
 
-    MacroNameStr = MacroName->Val->Identifier;
+    MacroNameStr = MacroName->Val->StructName;
 
     if (LexRawPeekToken(Parser) == TokenOpenMacroBracket) {
         /* it's a parameterized macro, read the parameters */
@@ -519,10 +532,10 @@ void ParseMacroDefinition(struct ParseState *Parser)
 
         Token = LexGetToken(Parser, &ParamName, true);
 
-        while (Token == TokenIdentifier) {
+        while (Token == TokenStructName) {
             /* store a parameter name */
             MacroValue->Val->MacroDef.ParamName[ParamCount++] =
-                ParamName->Val->Identifier;
+                ParamName->Val->StructName;
 
             /* get the trailing comma */
             Token = LexGetToken(Parser, NULL, true);
@@ -715,11 +728,11 @@ enum ParseResult ParseStatement(struct ParseState *Parser,
     switch (Token) {
     case TokenEOF:
         return ParseResultEOF;
-    case TokenIdentifier:
+    case TokenStructName:
         /* might be a typedef-typed variable declaration or it might
             be an expression */
-        if (VariableDefined(Parser->pc, LexerValue->Val->Identifier)) {
-            VariableGet(Parser->pc, Parser, LexerValue->Val->Identifier,
+        if (VariableDefined(Parser->pc, LexerValue->Val->StructName)) {
+            VariableGet(Parser->pc, Parser, LexerValue->Val->StructName,
                 &VarValue);
             if (VarValue->Typ->Base == Type_Type) {
                 *Parser = PreState;
@@ -734,7 +747,7 @@ enum ParseResult ParseStatement(struct ParseState *Parser,
                 /* declare the identifier as a goto label */
                 LexGetToken(Parser, NULL, true);
                 if (Parser->Mode == RunModeGoto &&
-                        LexerValue->Val->Identifier == Parser->SearchGotoLabel)
+                        LexerValue->Val->StructName == Parser->SearchGotoLabel)
                     Parser->Mode = RunModeRun;
                 CheckTrailingSemicolon = false;
                 break;
@@ -928,26 +941,26 @@ enum ParseResult ParseStatement(struct ParseState *Parser,
         ParseTypedef(Parser);
         break;
     case TokenGoto:
-        if (LexGetToken(Parser, &LexerValue, true) != TokenIdentifier)
+        if (LexGetToken(Parser, &LexerValue, true) != TokenStructName)
             ProgramFail(Parser, "identifier expected");
         if (Parser->Mode == RunModeRun) {
             /* start scanning for the goto label */
-            Parser->SearchGotoLabel = LexerValue->Val->Identifier;
+            Parser->SearchGotoLabel = LexerValue->Val->StructName;
             Parser->Mode = RunModeGoto;
         }
         break;
     case TokenDelete:
         {
             /* try it as a function or variable name to delete */
-            if (LexGetToken(Parser, &LexerValue, true) != TokenIdentifier)
+            if (LexGetToken(Parser, &LexerValue, true) != TokenStructName)
                 ProgramFail(Parser, "identifier expected");
             if (Parser->Mode == RunModeRun) {
                 /* delete this variable or function */
                 CValue = TableDelete(Parser->pc, &Parser->pc->GlobalTable,
-                    LexerValue->Val->Identifier);
+                    LexerValue->Val->StructName);
                 if (CValue == NULL)
                     ProgramFail(Parser, "'%s' is not defined",
-                        LexerValue->Val->Identifier);
+                        LexerValue->Val->StructName);
 
                 VariableFree(Parser->pc, CValue);
             }

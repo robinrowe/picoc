@@ -681,6 +681,7 @@ void StdioPrintf(struct ParseState *Parser, struct Value *ReturnValue,
     PrintfArgs.NumArgs = NumArgs - 1;
     ReturnValue->Val->Integer = StdioBasePrintf(Parser, stdout, NULL, 0,
         Param[0]->Val->Pointer, &PrintfArgs);
+    fflush(stdout);  /* Flush output immediately for Windows console */
 }
 
 void StdioVprintf(struct ParseState *Parser, struct Value *ReturnValue,

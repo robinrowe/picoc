@@ -7,7 +7,7 @@
 static unsigned int TableHash(const char *Key, int Len);
 static struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,
     int *AddAt);
-static struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
+static struct TableEntry *TableSearchStructName(struct Table *Tbl,
     const char *Key, int Len, int *AddAt);
 
 /* initialize the shared string system */
@@ -130,7 +130,7 @@ struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key)
 }
 
 /* check a hash table entry for an identifier */
-struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
+struct TableEntry *TableSearchStructName(struct Table *Tbl,
     const char *Key, int Len, int *AddAt)
 {
     int HashValue = TableHash(Key, Len) % Tbl->Size;
@@ -147,11 +147,11 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
 }
 
 /* set an identifier and return the identifier. share if possible */
-char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
+char *TableSetStructName(Picoc *pc, struct Table *Tbl, const char *Ident,
     int IdentLen)
 {
     int AddAt;
-    struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,
+    struct TableEntry *FoundEntry = TableSearchStructName(Tbl, Ident, IdentLen,
         &AddAt);
 
     if (FoundEntry != NULL)
@@ -163,7 +163,7 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
             sizeof(struct TableEntry) -
             sizeof(union TableEntryPayload) + IdentLen + 1);
         if (NewEntry == NULL)
-            ProgramFailNoParser(pc, "(TableSetIdentifier) out of memory");
+            ProgramFailNoParser(pc, "(TableSetStructName) out of memory");
 
         strncpy((char *)&NewEntry->p.Key[0], (char *)Ident, IdentLen);
         NewEntry->p.Key[IdentLen] = '\0';
@@ -176,7 +176,7 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
 /* register a string in the shared string store */
 char *TableStrRegister2(Picoc *pc, const char *Str, int Len)
 {
-    return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
+    return TableSetStructName(pc, &pc->StringTable, Str, Len);
 }
 
 char *TableStrRegister(Picoc *pc, const char *Str)

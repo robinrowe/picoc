@@ -33,7 +33,7 @@ void LibraryAdd(Picoc *pc, struct LibraryFunction *FuncList)
 {
     struct ParseState Parser;
     int Count;
-    char *Identifier;
+    char *StructName;
     struct ValueType *ReturnType;
     struct Value *NewValue;
     void *Tokens;
@@ -46,8 +46,8 @@ void LibraryAdd(Picoc *pc, struct LibraryFunction *FuncList)
             strlen((char*)FuncList[Count].Prototype), NULL);
         LexInitParser(&Parser, pc, FuncList[Count].Prototype, Tokens,
             IntrinsicName, true, false);
-        TypeParse(&Parser, &ReturnType, &Identifier, NULL);
-        NewValue = ParseFunctionDefinition(&Parser, ReturnType, Identifier);
+        TypeParse(&Parser, &ReturnType, &StructName, NULL);
+        NewValue = ParseFunctionDefinition(&Parser, ReturnType, StructName);
         NewValue->Val->FuncDef.Intrinsic = FuncList[Count].Func;
         HeapFreeMem(pc, Tokens);
     }
@@ -107,15 +107,15 @@ void PrintType(struct ValueType *Typ, IOFILE *Stream)
         break;
     case TypeStruct:
         PrintStr("struct ", Stream);
-        PrintStr(Typ->Identifier, Stream);
+        PrintStr(Typ->StructName, Stream);
         break;
     case TypeUnion:
         PrintStr("union ", Stream);
-        PrintStr(Typ->Identifier, Stream);
+        PrintStr(Typ->StructName, Stream);
         break;
     case TypeEnum:
         PrintStr("enum ", Stream);
-        PrintStr(Typ->Identifier, Stream);
+        PrintStr(Typ->StructName, Stream);
         break;
     case TypeGotoLabel:
         PrintStr("goto label ", Stream);

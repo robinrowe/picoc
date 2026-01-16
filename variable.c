@@ -103,7 +103,7 @@ struct Value *VariableAllocValueAndData(Picoc *pc, struct ParseState *Parser,
     NewValue->ValOnStack = !OnHeap;
     NewValue->IsLValue = IsLValue;
     NewValue->LValueFrom = LValueFrom;
-    NewValue->MemberThisPtr = NULL;
+//    NewValue->MemberThisPtr = NULL;
     if (Parser)
         NewValue->ScopeID = Parser->ScopeID;
 
@@ -403,8 +403,45 @@ int VariableDefined(Picoc *pc, const char *Ident)
 void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
     struct Value **LVal)
 {
-    if (pc->TopStackFrame == NULL || !TableGet(&pc->TopStackFrame->LocalTable,
-            Ident, LVal, NULL, NULL, NULL)) {
+    /* First check if we have a special 'this' keyword */
+    if (strcmp(Ident, "this") == 0 && pc->TopStackFrame != NULL && 
+        pc->TopStackFrame->HasThis) {
+        *LVal = &pc->TopStackFrame->ThisValue;
+        return;
+    }
+
+    /* Check local variables and parameters first */
+    if (pc->TopStackFrame == NULL || 
+        pc->TopStackFrame->LocalTable.Size == 0 ||
+        !TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
+        
+        /* If we're in a member function, check if this is a member of 'this' */
+        if (pc->TopStackFrame != NULL && pc->TopStackFrame->HasThis) {
+            struct Value *ThisVal = &pc->TopStackFrame->ThisValue;
+            struct ValueType *StructType = ThisVal->Typ;
+            
+            /* Dereference if this is a pointer */
+            if (StructType->Base == TypePointer)
+                StructType = StructType->FromType;
+            
+            /* Check if this identifier is a member of the struct */
+            if (StructType->Base == TypeStruct && StructType->Members != NULL &&
+                StructType->Members->Size > 0) {
+                struct Value *MemberValue;
+                if (TableGet(StructType->Members, Ident, &MemberValue, NULL, NULL, NULL)) {
+                    /* Found it as a struct member - create an lvalue pointing to it */
+                    char *DerefDataLoc = (char *)ThisVal->Val->Pointer;
+                    struct Value *Result = VariableAllocValueFromExistingData(Parser,
+                        MemberValue->Typ,
+                        (void*)(DerefDataLoc + MemberValue->Val->Integer),
+                        true, ThisVal);
+                    *LVal = Result;
+                    return;
+                }
+            }
+        }
+        
+        /* Not found in locals or 'this' members - check globals */
         if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
             if (VariableDefinedAndOutOfScope(pc, Ident))
                 ProgramFail(Parser, "'%s' is out of scope", Ident);
@@ -477,6 +514,7 @@ void VariableStackFrameAdd(struct ParseState *Parser, const char *FuncName,
     TableInitTable(&NewFrame->LocalTable, &NewFrame->LocalHashTable[0],
         LOCAL_TABLE_SIZE, false);
     NewFrame->PreviousStackFrame = Parser->pc->TopStackFrame;
+    NewFrame->HasThis = false;  /* Initialize to false, will be set for member functions */
     Parser->pc->TopStackFrame = NewFrame;
 }
 

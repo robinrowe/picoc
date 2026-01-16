@@ -123,7 +123,7 @@ enum LexToken {
                TokenArrow,
     /* 0x2b */ TokenOpenBracket,
                TokenCloseBracket,
-    /* 0x2d */ TokenIdentifier,
+    /* 0x2d */ TokenStructName,
                TokenIntegerConstant,
                TokenFPConstant,
                TokenStringConstant,
@@ -242,12 +242,15 @@ struct ValueType {
     int ArraySize;                  /* the size of an array type */
     int Sizeof;                     /* the storage required */
     int AlignBytes;                 /* the alignment boundary of this type */
-    const char *Identifier;         /* the name of a struct or union */
+    const char *StructName;         /* the name of a struct or union */
     struct ValueType *FromType;     /* the type we're derived from (or NULL) */
     struct ValueType *DerivedTypeList;  /* first in a list of types derived from this one */
     struct ValueType *Next;         /* next item in the derived type list */
     struct Table *Members;          /* members of a struct or union */
+#if 0
     struct Table *MemberFunctions;  /* member functions table for structs (or NULL) */
+    char *ThisPtr;
+#endif
     int OnHeap;                     /* true if allocated on the heap */
     int StaticQualifier;            /* true if it's a static */
 };
@@ -283,7 +286,7 @@ union AnyValue {
     unsigned int UnsignedInteger;
     unsigned long UnsignedLongInteger;
     unsigned char UnsignedCharacter;
-    char *Identifier;
+    char *StructName;
     char ArrayMem[2];       /* placeholder for where the data starts,
                                 doesn't point to it */
     struct ValueType *Typ;
@@ -303,7 +306,7 @@ struct Value {
     char IsLValue;              /* is modifiable and is allocated somewhere we can usefully modify it */
     int ScopeID;                /* to know when it goes out of scope */
     char OutOfScope;
-    struct Value *MemberThisPtr;    /* 'this' pointer for member function calls */
+//    struct Value *MemberThisPtr;    /* 'this' pointer for member function calls */
 };
 
 /* hash table data structure */
@@ -347,6 +350,9 @@ struct StackFrame {
     struct Table LocalTable;                /* the local variables and parameters */
     struct TableEntry *LocalHashTable[LOCAL_TABLE_SIZE];
     struct StackFrame *PreviousStackFrame;  /* the next lower stack frame */
+    struct Value ThisValue;                 /* 'this' pointer Value for member functions */
+    union AnyValue ThisData;                /* data storage for 'this' pointer */
+    int HasThis;                            /* true if this is a member function call */
 };
 
 /* lexer state */
@@ -510,7 +516,17 @@ struct Picoc_Struct {
     struct Table StringTable;
     struct TableEntry *StringHashTable[STRING_TABLE_SIZE];
     char *StrEmpty;
+ #if 0   
+    /* member function call cache - used to pass function value to ExpressionParseFunctionCall */
+    struct Value *MemberFunctionCache;
+    void *MemberThisPtrCache;  /* raw pointer to struct data for 'this' */
+    struct ValueType *MemberThisTypeCache;  /* type of the struct for 'this' */
+#else
+    int isThis;
+#endif
 };
+
+char* MakeMemberFunctionName(const char* StructName,const char* MemberName);
 
 /* table.c */
 extern void TableInit(Picoc *pc);
@@ -523,7 +539,7 @@ extern int TableSet(Picoc *pc, struct Table *Tbl, char *Key, struct Value *Val,
 extern int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     const char **DeclFileName, int *DeclLine, int *DeclColumn);
 extern struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key);
-extern char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
+extern char *TableSetStructName(Picoc *pc, struct Table *Tbl, const char *Ident,
     int IdentLen);
 extern void TableStrFree(Picoc *pc);
 
@@ -551,9 +567,7 @@ extern void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger);
 extern enum ParseResult ParseStatement(struct ParseState *Parser,
     int CheckTrailingSemicolon);
 extern struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *Identifier);
-extern struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier);
+    struct ValueType *ReturnType, char *StructName);
 extern void ParseCleanup(Picoc *pc);
 extern void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 extern void ParserCopy(struct ParseState *To, struct ParseState *From);
@@ -577,11 +591,11 @@ extern int TypeLastAccessibleOffset(Picoc *pc, struct Value *Val);
 extern int TypeParseFront(struct ParseState *Parser, struct ValueType **Typ,
     int *IsStatic);
 extern void TypeParseIdentPart(struct ParseState *Parser,
-    struct ValueType *BasicTyp, struct ValueType **Typ, char **Identifier);
+    struct ValueType *BasicTyp, struct ValueType **Typ, char **StructName);
 extern void TypeParse(struct ParseState *Parser, struct ValueType **Typ,
-    char **Identifier, int *IsStatic);
+    char **StructName, int *IsStatic);
 extern struct ValueType *TypeGetMatching(Picoc *pc, struct ParseState *Parser,
-    struct ValueType *ParentType, enum BaseType Base, int ArraySize, const char *Identifier, int AllowDuplicates);
+    struct ValueType *ParentType, enum BaseType Base, int ArraySize, const char *StructName, int AllowDuplicates);
 extern struct ValueType *TypeCreateOpaqueStruct(Picoc *pc, struct ParseState *Parser,
     const char *StructName, int Size);
 extern int TypeIsForwardDeclared(struct ParseState *Parser, struct ValueType *Typ);

@@ -25,7 +25,8 @@ char *PlatformGetLine(char *Buf, int MaxLen, const char *Prompt)
         printf("%s", Prompt);
 
     fflush(stdout);
-    return fgets(Buf, MaxLen, stdin);
+    char* s = fgets(Buf, MaxLen, stdin);
+    return s;
 }
 
 /* get a character of interactive input */
@@ -90,4 +91,5 @@ void PlatformExit(Picoc *pc, int RetVal)
 {
     pc->PicocExitValue = RetVal;
     longjmp(pc->PicocExitBuf, 1);
+//    fflush(stdout);
 }

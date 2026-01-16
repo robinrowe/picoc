@@ -316,7 +316,7 @@ Here's a more sophisticated method, using the internal functions of picoc direct
 void PlatformLibraryInit()
 {
     struct ParseState Parser;
-    char *Identifier;
+    char *StructName;
     struct ValueType *ParsedType;
     void *Tokens;
     char *IntrinsicName = TableStrRegister("complex library");
@@ -325,7 +325,7 @@ void PlatformLibraryInit()
     /* define an example structure */
     Tokens = LexAnalyse(IntrinsicName, StructDefinition, strlen(StructDefinition), NULL);
     LexInitParser(&Parser, StructDefinition, Tokens, IntrinsicName, true, false);
-    TypeParse(&Parser, &ParsedType, &Identifier, &IsStatic);
+    TypeParse(&Parser, &ParsedType, &StructName, &IsStatic);
     HeapFree(Tokens);
 }
 ```

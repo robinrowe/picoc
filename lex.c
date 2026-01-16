@@ -251,9 +251,9 @@ enum LexToken LexGetWord(Picoc *pc, struct LexState *Lexer, struct Value *Value)
     } while (Lexer->Pos != Lexer->End && isCident((int)*Lexer->Pos));
 
     Value->Typ = NULL;
-    Value->Val->Identifier = TableStrRegister2(pc, StartPos, Lexer->Pos - StartPos);
+    Value->Val->StructName = TableStrRegister2(pc, StartPos, Lexer->Pos - StartPos);
 
-    Token = LexCheckReservedWord(pc, Value->Val->Identifier);
+    Token = LexCheckReservedWord(pc, Value->Val->StructName);
     switch (Token) {
     case TokenHashInclude:
         Lexer->Mode = LexModeHashInclude;
@@ -271,7 +271,7 @@ enum LexToken LexGetWord(Picoc *pc, struct LexState *Lexer, struct Value *Value)
     if (Lexer->Mode == LexModeHashDefineSpace)
         Lexer->Mode = LexModeHashDefineSpaceIdent;
 
-    return TokenIdentifier;
+    return TokenStructName;
 }
 
 /* unescape a character from an octal character constant */
@@ -612,7 +612,7 @@ enum LexToken LexScanGetToken(Picoc *pc, struct LexState *Lexer,
 int LexTokenSize(enum LexToken Token)
 {
     switch (Token) {
-    case TokenIdentifier: case TokenStringConstant: return sizeof(char*);
+    case TokenStructName: case TokenStringConstant: return sizeof(char*);
     case TokenIntegerConstant: return sizeof(long);
     case TokenCharacterConstant: return sizeof(unsigned char);
     case TokenFPConstant: return sizeof(double);
@@ -813,7 +813,7 @@ enum LexToken LexGetRawToken(struct ParseState *Parser, struct Value **Value,
             case TokenStringConstant:
                 pc->LexValue.Typ = pc->CharPtrType;
                 break;
-            case TokenIdentifier:
+            case TokenStructName:
                 pc->LexValue.Typ = NULL;
                 break;
             case TokenIntegerConstant:
@@ -868,11 +868,11 @@ void LexHashIfdef(struct ParseState *Parser, int IfNot)
     struct Value *SavedValue;
     enum LexToken Token = LexGetRawToken(Parser, &IdentValue, true);
 
-    if (Token != TokenIdentifier)
+    if (Token != TokenStructName)
         ProgramFail(Parser, "identifier expected");
 
     /* is the identifier defined? */
-    IsDefined = TableGet(&Parser->pc->GlobalTable, IdentValue->Val->Identifier,
+    IsDefined = TableGet(&Parser->pc->GlobalTable, IdentValue->Val->StructName,
         &SavedValue, NULL, NULL, NULL);
     if (Parser->HashIfEvaluateToLevel == Parser->HashIfLevel &&
             ((IsDefined && !IfNot) || (!IsDefined && IfNot))) {
@@ -892,11 +892,11 @@ void LexHashIf(struct ParseState *Parser)
     struct ParseState MacroParser;
     enum LexToken Token = LexGetRawToken(Parser, &IdentValue, true);
 
-    if (Token == TokenIdentifier) {
+    if (Token == TokenStructName) {
         /* look up a value from a macro definition */
-        if (!TableGet(&Parser->pc->GlobalTable, IdentValue->Val->Identifier,
+        if (!TableGet(&Parser->pc->GlobalTable, IdentValue->Val->StructName,
                 &SavedValue, NULL, NULL, NULL))
-            ProgramFail(Parser, "'%s' is undefined", IdentValue->Val->Identifier);
+            ProgramFail(Parser, "'%s' is undefined", IdentValue->Val->StructName);
 
         if (SavedValue->Typ->Base != TypeMacro)
             ProgramFail(Parser, "value expected");
@@ -993,7 +993,7 @@ void LexPrintToken(enum LexToken Token)
                     "Arrow",
         /* 0x2b */  "OpenBracket",
                     "CloseBracket",
-        /* 0x2d */  "Identifier",
+        /* 0x2d */  "StructName",
                     "IntegerConstant",
                     "FPConstant",
                     "StringConstant",
