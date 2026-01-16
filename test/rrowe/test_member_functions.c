@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 struct Foo 
 { 
     int x;
@@ -5,7 +7,7 @@ struct Foo
     
     void SetX(int newX)
     {
-        x = newX;  // dot accesses member of 'this'
+        x = newX;  
     }
     
     void SetY(int newY)
@@ -26,6 +28,5 @@ int main()
     foo.SetY(20);      // Transformed to: Foo_SetY(&foo, 20)
     int sum = foo.GetSum();  // Transformed to: Foo_GetSum(&foo)
     printf("Sum: %d\n", sum);
-    fflush(stdout);
     return 0;
 }

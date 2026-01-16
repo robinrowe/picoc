@@ -2,7 +2,7 @@
  * which handles operator precedence */
 #include <stdint.h>
 #include "interpreter.h"
-
+#define VERBOSE
 
 /* whether evaluation is left to right for a given precedence level */
 #define IS_LEFT_TO_RIGHT(p) ((p) != 2 && (p) != 14)
@@ -91,8 +91,8 @@ static struct OpPrecedence OperatorPrecedence[] = {
     /* TokenRightSquareBracket, */ {0, 15, 0, "]"},
     /* TokenDot, */ {0, 0, 15, "."},
     /* TokenArrow, */ {0, 0, 15, "->"},
-    /* TokenOpenBracket, */ {15, 0, 0, "("},
-    /* TokenCloseBracket, */ {0, 15, 0, ")"}
+    /* TokenOpenParen, */ {15, 0, 0, "("},
+    /* TokenCloseParen, */ {0, 15, 0, ")"}
 };
 
 
@@ -164,10 +164,10 @@ void ExpressionStackShow(Picoc *pc, struct ExpressionStack *StackTop)
                 printf("%f:fp", StackTop->Val->Val->FP);
                 break;
             case TypeFunction:
-                printf("%s:function", StackTop->Val->Val->StructName);
+                printf("%s:function", StackTop->Val->Val->Identifier);
                 break;
             case TypeMacro:
-                printf("%s:macro", StackTop->Val->Val->StructName);
+                printf("%s:macro", StackTop->Val->Val->Identifier);
                 break;
             case TypePointer:
                 if (StackTop->Val->Val->Pointer == NULL)
@@ -181,13 +181,13 @@ void ExpressionStackShow(Picoc *pc, struct ExpressionStack *StackTop)
                 printf("array");
                 break;
             case TypeStruct:
-                printf("%s:struct", StackTop->Val->Val->StructName);
+                printf("%s:struct", StackTop->Val->Val->Identifier);
                 break;
             case TypeUnion:
-                printf("%s:union", StackTop->Val->Val->StructName);
+                printf("%s:union", StackTop->Val->Val->Identifier);
                 break;
             case TypeEnum:
-                printf("%s:enum", StackTop->Val->Val->StructName);
+                printf("%s:enum", StackTop->Val->Val->Identifier);
                 break;
             case Type_Type:
                 PrintType(StackTop->Val->Val->Typ, pc->CStdOut);
@@ -223,8 +223,8 @@ int IsTypeToken(struct ParseState *Parser, enum LexToken t,
         return 1; /* base type */
 
     /* typedef'ed type? */
-    if (t == TokenStructName) {
-        /* see TypeParseFront, case TokenStructName and ParseTypedef */
+    if (t == TokenIdentifier) {
+        /* see TypeParseFront, case TokenIdentifier and ParseTypedef */
         struct Value * VarValue;
         if (VariableDefined(Parser->pc, LexValue->Val->Pointer)) {
             VariableGet(Parser->pc, Parser, LexValue->Val->Pointer, &VarValue);
@@ -581,7 +581,7 @@ void ExpressionAssign(struct ParseState *Parser, struct Value *DestValue,
 #endif
                 DestValue->Typ = TypeGetMatching(Parser->pc, Parser,
                             DestValue->Typ->FromType, DestValue->Typ->Base,
-                            Size, DestValue->Typ->StructName, true);
+                            Size, DestValue->Typ->Identifier, true);
                 VariableRealloc(Parser, DestValue, TypeSizeValue(DestValue,
                     false));
             }
@@ -836,7 +836,7 @@ void ExpressionPostfixOperator(struct ParseState *Parser,
         case TokenRightSquareBracket:
             ProgramFail(Parser, "not supported");
             break;  /* XXX */
-        case TokenCloseBracket:
+        case TokenCloseParen:
             ProgramFail(Parser, "not supported");
             break;  /* XXX */
         default:
@@ -1377,7 +1377,7 @@ void ExpressionGetStructElement(struct ParseState *Parser,
     struct Value *Ident;
 
     /* get the identifier following the '.' or '->' */
-    if (LexGetToken(Parser, &Ident, true) != TokenStructName)
+    if (LexGetToken(Parser, &Ident, true) != TokenIdentifier)
         ProgramFail(Parser, "need an structure or union member after '%s'",
             (Token == TokenDot) ? "." : "->");
 
@@ -1401,10 +1401,10 @@ void ExpressionGetStructElement(struct ParseState *Parser,
                 (Token == TokenDot) ? "." : "->",
                 (Token == TokenArrow) ? "pointer" : "", ParamVal->Typ);
 
-        if (!TableGet(StructType->Members, Ident->Val->StructName,
+        if (!TableGet(StructType->Members, Ident->Val->Identifier,
                 &MemberValue, NULL, NULL, NULL))
             ProgramFail(Parser, "doesn't have a member called '%s'",
-                Ident->Val->StructName);
+                Ident->Val->Identifier);
 
         /* pop the value - assume it'll still be there until we're done */
         HeapPopStack(Parser->pc, ParamVal,
@@ -1432,8 +1432,8 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
     struct Value *MemberFunc = NULL;
     char *DerefDataLoc = (char *)ParamVal->Val;
     char *ThisPtr = 0;
-#endif
     int isThis = 0;
+#endif
     struct Value *Ident;
 
 #ifdef VERBOSE
@@ -1445,7 +1445,7 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
 #endif
 
     /* consume the identifier token (should match MemberName) */
-    if (LexGetToken(Parser, &Ident, true) != TokenStructName)
+    if (LexGetToken(Parser, &Ident, true) != TokenIdentifier)
         ProgramFail(Parser, "identifier expected");
 
     /* if we're doing '->' dereference the struct pointer first */
@@ -1454,7 +1454,7 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
         /*DerefDataLoc*/ StructType->ThisPtr = VariableDereferencePointer(ParamVal, &StructVal,
             NULL, &StructType, NULL);
 #else
-        isThis = 1;
+//        StructType->isThis = 1;
 #endif
     if (StructType->Base != TypeStruct)
         ProgramFail(Parser, "member functions can only be called on structs (got %t)", StructType);
@@ -1463,7 +1463,7 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
     if (StructType->MemberFunctions == NULL ||
         !TableGet(StructType->MemberFunctions, MemberName, &MemberFunc, NULL, NULL, NULL))
         ProgramFail(Parser, "struct %s doesn't have a member function called '%s'",
-            StructType->StructName, MemberName);
+            StructType->Identifier, MemberName);
 
     if (MemberFunc->Typ->Base != TypeFunction)
         ProgramFail(Parser, "%s is not a function", MemberName);
@@ -1491,7 +1491,7 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
     Parser->pc->MemberThisTypeCache = StructType;
 #endif
     /* Call the member function */
-//    MemberName = MakeMemberFunctionName(StructType->StructName,MemberName);
+//    MemberName = MakeMemberFunctionName(StructType->Identifier,MemberName);
     ExpressionParseFunctionCall(Parser, StackTop, MemberName, Parser->Mode == RunModeRun);
 //    free(MemberName);
 #if 0
@@ -1524,8 +1524,8 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
 
         ParserCopy(&PreState, Parser);
         Token = LexGetToken(Parser, &LexValue, true);
-        if ((((int)Token > TokenComma && (int)Token <= (int)TokenOpenBracket) ||
-               (Token == TokenCloseBracket && BracketPrecedence != 0)) &&
+        if ((((int)Token > TokenComma && (int)Token <= (int)TokenOpenParen) ||
+               (Token == TokenCloseParen && BracketPrecedence != 0)) &&
                (Token != TokenColon || TernaryDepth > 0)) {
             /* it's an operator with precedence */
             if (PrefixState) {
@@ -1536,18 +1536,18 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 LocalPrecedence = OperatorPrecedence[(int)Token].PrefixPrecedence;
                 Precedence = BracketPrecedence + LocalPrecedence;
 
-                if (Token == TokenOpenBracket) {
+                if (Token == TokenOpenParen) {
                     /* it's either a new bracket level or a cast */
                     enum LexToken BracketToken = LexGetToken(Parser, &LexValue, false);
                     if (IsTypeToken(Parser, BracketToken, LexValue) &&
                             (StackTop == NULL || StackTop->Op != TokenSizeof)) {
                         /* it's a cast - get the new type */
                         struct ValueType *CastType;
-                        char *CastStructName;
+                        char *CastIdentifier;
                         struct Value *CastTypeValue;
 
-                        TypeParse(Parser, &CastType, &CastStructName, NULL);
-                        if (LexGetToken(Parser, &LexValue, true) != TokenCloseBracket)
+                        TypeParse(Parser, &CastType, &CastIdentifier, NULL);
+                        if (LexGetToken(Parser, &LexValue, true) != TokenCloseParen)
                             ProgramFail(Parser, "brackets not closed");
 
                         /* scan and collapse the stack to the precedence of
@@ -1575,7 +1575,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                         e.g. x = - -5, or x = **y */
                     int NextToken = LexGetToken(Parser, NULL, false);
                     int TempPrecedenceBoost = 0;
-                    if (NextToken > TokenComma && NextToken < TokenOpenBracket) {
+                    if (NextToken > TokenComma && NextToken < TokenOpenParen) {
                         int NextPrecedence =
                             OperatorPrecedence[(int)NextToken].PrefixPrecedence;
 
@@ -1596,7 +1596,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 /* expect an infix or postfix operator */
                 if (OperatorPrecedence[(int)Token].PostfixPrecedence != 0) {
                     switch (Token) {
-                    case TokenCloseBracket:
+                    case TokenCloseParen:
                     case TokenRightSquareBracket:
                         if (BracketPrecedence == 0) {
                             /* assume this bracket is after the end of the
@@ -1643,14 +1643,14 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                         struct Value *MemberIdent;
                         struct ParseState PeekState;
                         ParserCopy(&PeekState, Parser);
-                        if (LexGetToken(&PeekState, &MemberIdent, true) == TokenStructName &&
-                            LexGetToken(&PeekState, NULL, false) == TokenOpenBracket) {
+                        if (LexGetToken(&PeekState, &MemberIdent, true) == TokenIdentifier &&
+                            LexGetToken(&PeekState, NULL, false) == TokenOpenParen) {
                             /* It's a member function call - actually execute it */
 #ifdef VERBOSE
                             fprintf(stderr, "DEBUG: Calling ExpressionMemberFunctionCall (run mode)\n");
                             fflush(stderr);
 #endif
-                            ExpressionMemberFunctionCall(Parser, &StackTop, Token, MemberIdent->Val->StructName);
+                            ExpressionMemberFunctionCall(Parser, &StackTop, Token, MemberIdent->Val->Identifier);
                         } else {
                             /* Regular member access */
                             ExpressionGetStructElement(Parser, &StackTop, Token);
@@ -1708,35 +1708,51 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 } else
                     ProgramFail(Parser, "operator not expected here");
             }
-        } else if (Token == TokenStructName) {
+        } else if (Token == TokenIdentifier) {
             /* it's a variable, function or a macro */
 #ifdef VERBOSE
-            fprintf(stderr, "DEBUG: TokenStructName seen: '%s'\n", LexValue->Val->StructName);
+            fprintf(stderr, "DEBUG: TokenIdentifier seen: '%s'\n", LexValue->Val->Identifier);
             fflush(stderr);
 #endif
             
             if (!PrefixState)
                 ProgramFail(Parser, "identifier not expected here");
-
-            if (LexGetToken(Parser, NULL, false) == TokenOpenBracket) {
+            enum LexToken token = LexGetToken(Parser, NULL, false);
+            /* Peek ahead to see if next is identifier( */
+            struct Value *MemberIdent;
+            struct ParseState PeekState;
+            ParserCopy(&PeekState, Parser);  // Copy parser state
+            int is_member_function_call = 0;
+            enum LexToken token1 = LexGetToken(&PeekState, &MemberIdent, true);
+            enum LexToken token2 = 0;
+            enum LexToken token3 = 0;
+            if (token1 == TokenDot)
+            {   token2 = LexGetToken(&PeekState, NULL, true);
+                if(token2 == TokenIdentifier) 
+                {   token3 = LexGetToken(&PeekState, NULL, false);
+                    if(token3 == TokenOpenParen) 
+                    {   is_member_function_call = 1;
+            }   }   }
+            if (token == TokenOpenParen || is_member_function_call ) {
 #ifdef VERBOSE
-                fprintf(stderr, "DEBUG: It's a function call\n");
+                const char* type = is_member_function_call ? "member":"regular";
+                fprintf(stderr, "DEBUG: It's a %s function call: %s\n",type,LexValue->Val->Identifier);
                 fflush(stderr);
 #endif
                 ExpressionParseFunctionCall(Parser, &StackTop,
-                    LexValue->Val->StructName,
+                    LexValue->Val->Identifier,
                     Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
             } else {
 #ifdef VERBOSE
-                fprintf(stderr, "DEBUG: It's a variable\n");
-                fprintf(stderr, "DEBUG: Parser->Mode = %d, RunModeRun = %d\n", Parser->Mode, RunModeRun);
+                fprintf(stderr, "DEBUG: It's a variable: %s\n",LexValue->Val->Identifier);
+//                fprintf(stderr, "DEBUG: Parser->Mode = %d, RunModeRun = %d\n", Parser->Mode, RunModeRun);
                 fflush(stderr);
 #endif
                 
                 if (Parser->Mode == RunModeRun /* && Precedence < IgnorePrecedence */) {
                     struct Value *VariableValue = NULL;
 
-                    VariableGet(Parser->pc, Parser, LexValue->Val->StructName,
+                    VariableGet(Parser->pc, Parser, LexValue->Val->Identifier,
                         &VariableValue);
                     
 #ifdef VERBOSE
@@ -1763,7 +1779,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                         ProgramFail(Parser, "a void value isn't much use here");
                     else {
 #ifdef VERBOSE
-                        fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", LexValue->Val->StructName);
+                        fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", LexValue->Val->Identifier);
                         fprintf(stderr, "DEBUG: VariableValue->Typ->Base = %d\n", VariableValue->Typ->Base);
                         fflush(stderr);
 #endif
@@ -1788,7 +1804,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 IgnorePrecedence = DEEP_PRECEDENCE;
 
             PrefixState = false;
-        } else if ((int)Token > TokenCloseBracket &&
+        } else if ((int)Token > TokenCloseParen &&
                                         (int)Token <= TokenCharacterConstant) {
             /* it's a value of some sort, push it */
             if (!PrefixState)
@@ -1800,7 +1816,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
             /* it's a type. push it on the stack like a value.
                 this is used in sizeof() */
             struct ValueType *Typ;
-            char *StructName;
+            char *Identifier;
             struct Value *TypeValue;
 
             if (!PrefixState)
@@ -1808,7 +1824,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
 
             PrefixState = false;
             ParserCopy(Parser, &PreState);
-            TypeParse(Parser, &Typ, &StructName, NULL);
+            TypeParse(Parser, &Typ, &Identifier, NULL);
             TypeValue = VariableAllocValueFromType(Parser->pc, Parser,
                 &Parser->pc->TypeType, false, NULL, false);
             TypeValue->Val->Typ = Typ;
@@ -1887,16 +1903,16 @@ void ExpressionParseMacroCall(struct ParseState *Parser,
 
             ArgCount++;
             Token = LexGetToken(Parser, NULL, true);
-            if (Token != TokenComma && Token != TokenCloseBracket)
+            if (Token != TokenComma && Token != TokenCloseParen)
                 ProgramFail(Parser, "comma expected");
         } else {
             /* end of argument list? */
             Token = LexGetToken(Parser, NULL, true);
-            if (Token != TokenCloseBracket)
+            if (Token != TokenCloseParen)
                 ProgramFail(Parser, "bad argument");
         }
 
-    } while (Token != TokenCloseBracket);
+    } while (Token != TokenCloseParen);
 
     if (Parser->Mode == RunModeRun) {
         /* evaluate the macro */
@@ -1946,8 +1962,14 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
         if (Parser->pc->MemberFunctionCache != NULL) {
             FuncValue = Parser->pc->MemberFunctionCache;
         } else 
-#endif        
-        {
+#endif 
+  
+        /* Check if this is a member function call first */
+        if (Parser->pc->StructType != NULL) 
+        {  FuncName = "Foo_hello";
+        } 
+         
+        {   printf("DEBUG: VarialbeGet = %s\n",FuncName);
             /* get the function definition from variable tables */
             VariableGet(Parser->pc, Parser, FuncName, &FuncValue);
         }
@@ -1997,16 +2019,16 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
 
             ArgCount++;
             Token = LexGetToken(Parser, NULL, true);
-            if (Token != TokenComma && Token != TokenCloseBracket)
+            if (Token != TokenComma && Token != TokenCloseParen)
                 ProgramFail(Parser, "comma expected");
         } else {
             /* end of argument list? */
             Token = LexGetToken(Parser, NULL, true);
-            if (Token != TokenCloseBracket)
+            if (Token != TokenCloseParen)
                 ProgramFail(Parser, "bad argument");
         }
 
-    } while (Token != TokenCloseBracket);
+    } while (Token != TokenCloseParen);
 
     if (RunIt) {
         /* run the function */
@@ -2071,7 +2093,7 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
                 Parser->pc->TopStackFrame->HasThis = false;
             }
 #endif
-            if (Parser->pc->isThis) {
+            if (Parser->pc->StructType) {
             /* Function parameters should not go out of scope */
                 Parser->ScopeID = -1;
             }

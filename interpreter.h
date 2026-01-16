@@ -121,9 +121,9 @@ enum LexToken {
                TokenRightSquareBracket,
                TokenDot,
                TokenArrow,
-    /* 0x2b */ TokenOpenBracket,
-               TokenCloseBracket,
-    /* 0x2d */ TokenStructName,
+  /* 0x2b ( */ TokenOpenParen,
+               TokenCloseParen,
+    /* 0x2d */ TokenIdentifier,
                TokenIntegerConstant,
                TokenFPConstant,
                TokenStringConstant,
@@ -242,7 +242,7 @@ struct ValueType {
     int ArraySize;                  /* the size of an array type */
     int Sizeof;                     /* the storage required */
     int AlignBytes;                 /* the alignment boundary of this type */
-    const char *StructName;         /* the name of a struct or union */
+    const char *Identifier;         /* the name of a struct or union */
     struct ValueType *FromType;     /* the type we're derived from (or NULL) */
     struct ValueType *DerivedTypeList;  /* first in a list of types derived from this one */
     struct ValueType *Next;         /* next item in the derived type list */
@@ -286,7 +286,7 @@ union AnyValue {
     unsigned int UnsignedInteger;
     unsigned long UnsignedLongInteger;
     unsigned char UnsignedCharacter;
-    char *StructName;
+    char *Identifier;
     char ArrayMem[2];       /* placeholder for where the data starts,
                                 doesn't point to it */
     struct ValueType *Typ;
@@ -522,11 +522,12 @@ struct Picoc_Struct {
     void *MemberThisPtrCache;  /* raw pointer to struct data for 'this' */
     struct ValueType *MemberThisTypeCache;  /* type of the struct for 'this' */
 #else
-    int isThis;
+//    int isThis;
+    struct ValueType *StructType;
 #endif
 };
 
-char* MakeMemberFunctionName(const char* StructName,const char* MemberName);
+char* MakeMemberFunctionName(const char* Identifier,const char* MemberName);
 
 /* table.c */
 extern void TableInit(Picoc *pc);
@@ -539,7 +540,7 @@ extern int TableSet(Picoc *pc, struct Table *Tbl, char *Key, struct Value *Val,
 extern int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     const char **DeclFileName, int *DeclLine, int *DeclColumn);
 extern struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key);
-extern char *TableSetStructName(Picoc *pc, struct Table *Tbl, const char *Ident,
+extern char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
     int IdentLen);
 extern void TableStrFree(Picoc *pc);
 
@@ -567,7 +568,7 @@ extern void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger);
 extern enum ParseResult ParseStatement(struct ParseState *Parser,
     int CheckTrailingSemicolon);
 extern struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *StructName);
+    struct ValueType *ReturnType, char *Identifier);
 extern void ParseCleanup(Picoc *pc);
 extern void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 extern void ParserCopy(struct ParseState *To, struct ParseState *From);
@@ -591,13 +592,13 @@ extern int TypeLastAccessibleOffset(Picoc *pc, struct Value *Val);
 extern int TypeParseFront(struct ParseState *Parser, struct ValueType **Typ,
     int *IsStatic);
 extern void TypeParseIdentPart(struct ParseState *Parser,
-    struct ValueType *BasicTyp, struct ValueType **Typ, char **StructName);
+    struct ValueType *BasicTyp, struct ValueType **Typ, char **Identifier);
 extern void TypeParse(struct ParseState *Parser, struct ValueType **Typ,
-    char **StructName, int *IsStatic);
+    char **Identifier, int *IsStatic);
 extern struct ValueType *TypeGetMatching(Picoc *pc, struct ParseState *Parser,
-    struct ValueType *ParentType, enum BaseType Base, int ArraySize, const char *StructName, int AllowDuplicates);
+    struct ValueType *ParentType, enum BaseType Base, int ArraySize, const char *Identifier, int AllowDuplicates);
 extern struct ValueType *TypeCreateOpaqueStruct(Picoc *pc, struct ParseState *Parser,
-    const char *StructName, int Size);
+    const char *Identifier, int Size);
 extern int TypeIsForwardDeclared(struct ParseState *Parser, struct ValueType *Typ);
 
 /* heap.c */
