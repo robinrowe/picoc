@@ -552,6 +552,8 @@ extern enum ParseResult ParseStatement(struct ParseState *Parser,
     int CheckTrailingSemicolon);
 extern struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     struct ValueType *ReturnType, char *Identifier);
+extern struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
+    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier);
 extern void ParseCleanup(Picoc *pc);
 extern void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 extern void ParserCopy(struct ParseState *To, struct ParseState *From);

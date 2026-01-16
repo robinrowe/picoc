@@ -1,0 +1,8 @@
+# Test basic member function
+./picoc -s test_member_functions.c
+
+./picoc -i
+picoc> struct Point { int x; int y; void Set(int nx, int ny) { .x = nx; .y = ny; } };
+picoc> Point p;
+picoc> p.Set(10, 20);
+picoc> printf("%d, %d\n", p.x, p.y);

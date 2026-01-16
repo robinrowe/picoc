@@ -271,37 +271,45 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
         if (MemberType == NULL || MemberIdentifier == NULL)
             ProgramFail(Parser, "invalid type in struct");
 
-        MemberValue = VariableAllocValueAndData(pc, Parser, sizeof(int), false,
-            NULL, true);
-        MemberValue->Typ = MemberType;
-        if (IsStruct) {
-            /* allocate this member's location in the struct */
-            AlignBoundary = MemberValue->Typ->AlignBytes;
-            if (((*Typ)->Sizeof & (AlignBoundary-1)) != 0)
-                (*Typ)->Sizeof +=
-                    AlignBoundary - ((*Typ)->Sizeof & (AlignBoundary-1));
-
-            MemberValue->Val->Integer = (*Typ)->Sizeof;
-            (*Typ)->Sizeof += TypeSizeValue(MemberValue, true);
+        /* check if this is a member function (type identifier followed by '(') */
+        if (LexGetToken(Parser, NULL, false) == TokenOpenBracket) {
+            /* it's a member function definition */
+            ParseMemberFunctionDefinition(Parser, *Typ, MemberType, MemberIdentifier);
+            /* ParseMemberFunctionDefinition handles the entire function including semicolon */
         } else {
-            /* union members always start at 0, make sure it's big enough
-                to hold the largest member */
-            MemberValue->Val->Integer = 0;
-            if (MemberValue->Typ->Sizeof > (*Typ)->Sizeof)
-                (*Typ)->Sizeof = TypeSizeValue(MemberValue, true);
+            /* it's a regular member variable */
+            MemberValue = VariableAllocValueAndData(pc, Parser, sizeof(int), false,
+                NULL, true);
+            MemberValue->Typ = MemberType;
+            if (IsStruct) {
+                /* allocate this member's location in the struct */
+                AlignBoundary = MemberValue->Typ->AlignBytes;
+                if (((*Typ)->Sizeof & (AlignBoundary-1)) != 0)
+                    (*Typ)->Sizeof +=
+                        AlignBoundary - ((*Typ)->Sizeof & (AlignBoundary-1));
+
+                MemberValue->Val->Integer = (*Typ)->Sizeof;
+                (*Typ)->Sizeof += TypeSizeValue(MemberValue, true);
+            } else {
+                /* union members always start at 0, make sure it's big enough
+                    to hold the largest member */
+                MemberValue->Val->Integer = 0;
+                if (MemberValue->Typ->Sizeof > (*Typ)->Sizeof)
+                    (*Typ)->Sizeof = TypeSizeValue(MemberValue, true);
+            }
+
+            /* make sure to align to the size of the largest member's alignment */
+            if ((*Typ)->AlignBytes < MemberValue->Typ->AlignBytes)
+                (*Typ)->AlignBytes = MemberValue->Typ->AlignBytes;
+
+            /* define it */
+            if (!TableSet(pc, (*Typ)->Members, MemberIdentifier, MemberValue,
+                    Parser->FileName, Parser->Line, Parser->CharacterPos))
+                ProgramFail(Parser, "member '%s' already defined", &MemberIdentifier);
+
+            if (LexGetToken(Parser, NULL, true) != TokenSemicolon)
+                ProgramFail(Parser, "semicolon expected");
         }
-
-        /* make sure to align to the size of the largest member's alignment */
-        if ((*Typ)->AlignBytes < MemberValue->Typ->AlignBytes)
-            (*Typ)->AlignBytes = MemberValue->Typ->AlignBytes;
-
-        /* define it */
-        if (!TableSet(pc, (*Typ)->Members, MemberIdentifier, MemberValue,
-                Parser->FileName, Parser->Line, Parser->CharacterPos))
-            ProgramFail(Parser, "member '%s' already defined", &MemberIdentifier);
-
-        if (LexGetToken(Parser, NULL, true) != TokenSemicolon)
-            ProgramFail(Parser, "semicolon expected");
 
     } while (LexGetToken(Parser, NULL, false) != TokenRightBrace);
 

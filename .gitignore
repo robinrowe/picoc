@@ -9,6 +9,8 @@ picoc
 build/*
 archives/
 *.orig
+*.zip
+trapc_test/
 trapc_patches/
 picoc.plist
 picoc.config

@@ -1421,6 +1421,52 @@ void ExpressionGetStructElement(struct ParseState *Parser,
     }
 }
 
+/* handle member function calls: obj.method() or ptr->method() */
+void ExpressionMemberFunctionCall(struct ParseState *Parser,
+    struct ExpressionStack **StackTop, enum LexToken Token, const char *MemberName)
+{
+    struct Value *ParamVal = (*StackTop)->Val;
+    struct Value *StructVal = ParamVal;
+    struct ValueType *StructType = ParamVal->Typ;
+    struct Value *MemberFunc = NULL;
+    char *DerefDataLoc = (char *)ParamVal->Val;
+    struct Value *ThisPtr;
+
+    /* if we're doing '->' dereference the struct pointer first */
+    if (Token == TokenArrow)
+        DerefDataLoc = VariableDereferencePointer(ParamVal, &StructVal,
+            NULL, &StructType, NULL);
+
+    if (StructType->Base != TypeStruct)
+        ProgramFail(Parser, "member functions can only be called on structs");
+
+    /* look up the member function in the MemberFunctions table */
+    if (StructType->MemberFunctions == NULL ||
+        !TableGet(StructType->MemberFunctions, MemberName, &MemberFunc, NULL, NULL, NULL))
+        ProgramFail(Parser, "struct %s doesn't have a member function called '%s'",
+            StructType->Identifier, MemberName);
+
+    if (MemberFunc->Typ->Base != TypeFunction)
+        ProgramFail(Parser, "%s is not a function", MemberName);
+
+    /* pop the struct value - we'll set it as 'this' pointer */
+    HeapPopStack(Parser->pc, ParamVal,
+        sizeof(struct ExpressionStack) +
+        sizeof(struct Value) +
+        TypeStackSizeValue(StructVal));
+    *StackTop = (*StackTop)->Next;
+
+    /* store the 'this' pointer for use during function call */
+    ThisPtr = VariableAllocValueFromType(Parser->pc, Parser,
+        TypeGetMatching(Parser->pc, Parser, StructType, TypePointer, 0, Parser->pc->StrEmpty, true),
+        false, NULL, false);
+    ThisPtr->Val->Pointer = (void*)DerefDataLoc;
+    MemberFunc->MemberThisPtr = ThisPtr;
+
+    /* now call the member function */
+    ExpressionParseFunctionCall(Parser, StackTop, MemberName, Parser->Mode == RunModeRun);
+}
+
 /* parse an expression with operator precedence */
 int ExpressionParse(struct ParseState *Parser, struct Value **Result)
 {
@@ -1560,7 +1606,16 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                     if (Token == TokenDot || Token == TokenArrow) {
                         /* this operator is followed by a struct element so
                             handle it as a special case */
-                        ExpressionGetStructElement(Parser, &StackTop, Token);
+                        /* peek ahead to see if it's a function call */
+                        struct Value *MemberIdent;
+                        struct ParseState PeekState;
+                        ParserCopy(&PeekState, Parser);
+                        if (LexGetToken(&PeekState, &MemberIdent, true) == TokenIdentifier &&
+                            LexGetToken(&PeekState, NULL, false) == TokenOpenBracket) {
+                            ExpressionMemberFunctionCall(Parser, &StackTop, Token, MemberIdent->Val->Identifier);
+                        } else {
+                            ExpressionGetStructElement(Parser, &StackTop, Token);
+                        }
                     } else {
                         /* if it's a && or || operator we may not need to
                             evaluate the right hand side of the expression */
