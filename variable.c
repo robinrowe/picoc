@@ -103,6 +103,7 @@ struct Value *VariableAllocValueAndData(Picoc *pc, struct ParseState *Parser,
     NewValue->ValOnStack = !OnHeap;
     NewValue->IsLValue = IsLValue;
     NewValue->LValueFrom = LValueFrom;
+    NewValue->MemberThisPtr = NULL;
     if (Parser)
         NewValue->ScopeID = Parser->ScopeID;
 

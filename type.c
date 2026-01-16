@@ -36,6 +36,7 @@ struct ValueType *TypeAdd(Picoc *pc, struct ParseState *Parser,
     NewType->AlignBytes = AlignBytes;
     NewType->Identifier = Identifier;
     NewType->Members = NULL;
+    NewType->MemberFunctions = NULL;
     NewType->FromType = ParentType;
     NewType->DerivedTypeList = NULL;
     NewType->OnHeap = true;
@@ -129,6 +130,7 @@ void TypeAddBaseType(Picoc *pc, struct ValueType *TypeNode, enum BaseType Base,
     TypeNode->AlignBytes = AlignBytes;
     TypeNode->Identifier = pc->StrEmpty;
     TypeNode->Members = NULL;
+    TypeNode->MemberFunctions = NULL;
     TypeNode->FromType = NULL;
     TypeNode->DerivedTypeList = NULL;
     TypeNode->OnHeap = false;

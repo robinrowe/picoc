@@ -247,6 +247,7 @@ struct ValueType {
     struct ValueType *DerivedTypeList;  /* first in a list of types derived from this one */
     struct ValueType *Next;         /* next item in the derived type list */
     struct Table *Members;          /* members of a struct or union */
+    struct Table *MemberFunctions;  /* member functions table for structs (or NULL) */
     int OnHeap;                     /* true if allocated on the heap */
     int StaticQualifier;            /* true if it's a static */
 };
@@ -302,6 +303,7 @@ struct Value {
     char IsLValue;              /* is modifiable and is allocated somewhere we can usefully modify it */
     int ScopeID;                /* to know when it goes out of scope */
     char OutOfScope;
+    struct Value *MemberThisPtr;    /* 'this' pointer for member function calls */
 };
 
 /* hash table data structure */
