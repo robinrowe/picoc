@@ -9,6 +9,7 @@
 #include "expression.h"
 
 #define VERBOSE
+#define MAGIC
 //#define DEBUG_EXPRESSIONS
 
 /* whether evaluation is left to right for a given precedence level */
@@ -137,9 +138,11 @@ int IsTypeToken(struct ParseState *Parser, enum LexToken t,
         /* see TypeParseFront, case TokenIdentifier and ParseTypedef */
         struct Value * VarValue;
         if (VariableDefined(Parser->pc, LexValue->Val->Pointer)) {
-if (strcmp(LexValue->Val->Pointer, "Foo_hello") == 0) {
-    printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
-}
+#ifdef MAGIC
+    if (strcmp(LexValue->Val->Pointer, "Foo_hello") == 0) {
+        printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
+    }
+#endif
             VariableGet(Parser->pc, Parser, LexValue->Val->Pointer, &VarValue);
             if (VarValue->Typ == &Parser->pc->TypeType)
                 return 1;
@@ -1374,9 +1377,24 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
 // ============================================================================
 
 /* Returns 1 if this is a member function call pattern, 0 otherwise */
-static int CheckMemberFunctionPattern(struct ParseState *Parser, 
-                                      const char **OutMemberName)
-{
+static int IsMemberFunction(struct ParseState *Parser,char* MemberName)
+{   struct Value *MemberIdent;
+    struct ParseState PeekState;
+    ParserCopy(&PeekState, Parser);
+#if 0
+    enum LexToken token = LexGetToken(&PeekState, &MemberIdent, true); 
+    if(token == TokenIdentifier)
+    
+    &&
+        LexGetToken(&PeekState, NULL, false) == TokenOpenParen) {
+        // It's foo.hello() - member function call
+        ExpressionMemberFunctionCall(Parser, &StackTop, Token, MemberIdent->Val->Identifier);
+    } else {
+        // It's foo.x - regular member access
+        ExpressionGetStructElement(Parser, &StackTop, Token);
+    }
+
+    
     struct Value *MemberIdent = NULL;
     struct ParseState PeekState;
     ParserCopy(&PeekState, Parser);
@@ -1388,10 +1406,32 @@ static int CheckMemberFunctionPattern(struct ParseState *Parser,
     if (LexGetToken(&PeekState, NULL, false) != TokenOpenParen)
         return 0;
     /* It's a member function call! */
-    if (OutMemberName != NULL)
-        *OutMemberName = MemberIdent->Val->Identifier;
-    return 1;
+    return strdup(MemberIdent->Val->Identifier);
+
+
+       /* Get the object variable to find its type */
+    VariableGet(Parser->pc, Parser, ObjectName, &ObjectValue);
+    
+    /* Get the struct type name */
+    if (ObjectValue->Typ->Base != TypeStruct)
+        ProgramFail(Parser, "'%s' is not a struct", ObjectName);
+    
+    TypeName = ObjectValue->Typ->Identifier;
+    
+    /* Mangle: Foo_hello */
+    snprintf(FuncCallName, sizeof(FuncCallName), "%s_%s", TypeName, MemberName);
+    
+    /* Consume the . and member name tokens from real parser */
+    LexGetToken(Parser, NULL, true);   /* consume . */
+    LexGetToken(Parser, NULL, true);   /* consume member name */
 }
+
+
+#endif
+    return 0;
+}
+
+
 
 // ============================================================================
 // NEW HELPER FUNCTION 2: Handle member function call after variable is on stack
@@ -1563,7 +1603,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                     if ((Token == TokenDot || Token == TokenArrow) && Parser->Mode == RunModeRun) {
                         /* this operator is followed by a struct element so
                             handle it as a special case */
-#ifdef VERBOSE
+#ifdef VERBOSE2
                         fprintf(stderr, "DEBUG: Before handling dot/arrow (run mode)\n");
                         fprintf(stderr, "DEBUG: Parser->Mode = %d, RunModeRun = %d\n", Parser->Mode, RunModeRun);
                         fprintf(stderr, "DEBUG: StackTop = %p\n", (void*)StackTop);
@@ -1650,41 +1690,49 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
             const char *ObjectName = LexValue->Val->Identifier;
             
 #ifdef VERBOSE
-            fprintf(stderr, "DEBUG: TokenIdentifier seen: '%s'\n", ObjectName);
+            fprintf(stderr, "DEBUG: TokenIdentifier: '%s'\n", ObjectName);
             fflush(stderr);
 #endif
-
+#if 1
+            if(!strcmp(ObjectName,"foo"))
+            {   puts("MAGIC: foo");
+            }
+#endif
             if (!PrefixState)
                 ProgramFail(Parser, "identifier not expected here");
-            
-            enum LexToken token = LexGetToken(Parser, NULL, false);
-            
-            if (token == TokenOpenParen) {
-                /* It's a function call */
+            /* Check if followed by .identifier( for member function */
+            char MemberName[255];
+            if (IsMemberFunction(Parser,MemberName)) {
+                /* Variable is already on stack - handle member call */
+                HandleMemberFunctionCall(Parser, &StackTop, ObjectName, MemberName);
+            }
+            else
+            {   enum LexToken token = LexGetToken(Parser, NULL, false);
+                if (token == TokenOpenParen) {
+                    /* It's a function call */
 #ifdef VERBOSE
                 fprintf(stderr, "DEBUG: It's a regular function call: %s\n", ObjectName);
                 fflush(stderr);
 #endif
-//                assert(StackTop);
                 ExpressionParseFunctionCall(Parser, &StackTop,
                     ObjectName,
                     Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
                     
-            } else {
-                /* It's a variable reference */
+                } else {
+                    /* It's a variable reference */
 #ifdef VERBOSE
                 fprintf(stderr, "DEBUG: It's a variable: %s\n", ObjectName);
                 fflush(stderr);
 #endif
-                
-                if (Parser->Mode == RunModeRun) {
-                    struct Value *VariableValue = NULL;
+                    if (Parser->Mode == RunModeRun) {
+                        struct Value *VariableValue = NULL;
+#ifdef MAGIC
 if (strcmp(ObjectName, "Foo_hello") == 0) {
     printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
 }
-                    VariableGet(Parser->pc, Parser, ObjectName, &VariableValue);
-                    
-#ifdef VERBOSE
+#endif
+                        VariableGet(Parser->pc, Parser, ObjectName, &VariableValue);
+#ifdef VERBOSE2
                     fprintf(stderr, "DEBUG: Got variable, Typ->Base = %d\n", VariableValue->Typ->Base);
                     fflush(stderr);
 #endif
@@ -1710,25 +1758,26 @@ if (strcmp(ObjectName, "Foo_hello") == 0) {
                         
                     } else {
                         /* Push variable onto stack */
-#ifdef VERBOSE
+#ifdef VERBOSE2
                         fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", ObjectName);
                         fflush(stderr);
 #endif
                         ExpressionStackPushLValue(Parser, &StackTop, VariableValue, 0);
-                        
+#if 0
                         /* Check if followed by .identifier( for member function */
                         const char *MemberName = NULL;
-                        if (CheckMemberFunctionPattern(Parser, &MemberName)) {
+                        if (IsMemberFunction(Parser, &MemberName)) {
                             /* Variable is already on stack - handle member call */
                             HandleMemberFunctionCall(Parser, &StackTop, ObjectName, MemberName);
                         }
+#endif
+                        }
+                    } else {
+                        /* push a dummy value */
+                        ExpressionPushInt(Parser, &StackTop, 0);
                     }
-                } else {
-                    /* push a dummy value */
-                    ExpressionPushInt(Parser, &StackTop, 0);
                 }
             }
-
              /* if we've successfully ignored the RHS turn ignoring off */
             if (Precedence <= IgnorePrecedence)
                 IgnorePrecedence = DEEP_PRECEDENCE;
@@ -1926,9 +1975,11 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
 #ifdef VERBOSE
         printf("DEBUG: VariableGet = %s\n", LookupName);
 #endif
+#ifdef MAGIC
 if (strcmp(LookupName, "Foo_hello") == 0) {
     printf("DEBUG: VariableGet called for Foo_hello from line %d\n",__LINE__);
 }
+#endif
 #if 0
         VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
 #else

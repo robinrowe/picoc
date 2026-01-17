@@ -7,7 +7,7 @@
 #include "type.h"
 #include "heap.h"
 
-#define VERBOSE
+//#define VERBOSE
 
 static enum ParseResult ParseStatementMaybeRun(struct ParseState *Parser,
         int Condition, int CheckTrailingSemicolon);
@@ -189,7 +189,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     if (!TableSet(pc, &pc->GlobalTable, Identifier, FuncValue,
                 (char*)Parser->FileName, Parser->Line, Parser->CharacterPos))
         ProgramFail(Parser, "'%s' is already defined", Identifier);
-
+#ifdef VERBOSE
 printf("DEBUG: ParseFunctionDefinition completed for '%s', checking if it was registered...\n", Identifier);
 struct Value *TestValue;
 if (TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) {
@@ -197,7 +197,7 @@ if (TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) {
 } else {
     printf("DEBUG: FAILURE - '%s' is NOT in GlobalTable!\n", Identifier);
 }
-
+#endif
     return FuncValue;
 }
 
@@ -224,7 +224,9 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
 #endif
     /* Parse as a regular global function with the mangled name */
     /* The parser is already positioned at the '(' after the function name */
+#ifdef VERBOSE
     printf("DEBUG: ParseMemberFunctionDefinition END for member '%s'\n", MemberName);
+#endif
     return ParseFunctionDefinition(Parser, ReturnType, RegisteredName);
 }
 

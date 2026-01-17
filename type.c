@@ -243,7 +243,9 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     Picoc *pc = Parser->pc;
     struct Value *LexValue;
     struct ValueType *MemberType;
+#ifdef VERBOSE
     printf("DEBUG: TypeParseStruct called for struct (TopStackFrame=%p)\n", (void*)pc->TopStackFrame);
+#endif
     Token = LexGetToken(Parser, &LexValue, false);
     if (Token == TokenIdentifier) {
         LexGetToken(Parser, &LexValue, true);
@@ -262,8 +264,10 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     Token = LexGetToken(Parser, NULL, false);
     if (Token != TokenLeftBrace) {
         /* use the already defined structure */
+#ifdef VERBOSE
         printf("DEBUG: Reusing already-defined struct %s (Members=%p)\n", 
                StructIdentifier, (void*)(*Typ)->Members);
+#endif
         return;
     }
 
@@ -278,8 +282,10 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     TableInitTable((*Typ)->Members,
         (struct TableEntry**)((char*)(*Typ)->Members + sizeof(struct Table)),
         STRUCT_TABLE_SIZE, true);
+#ifdef VERBOSE
     printf("DEBUG: About to parse struct %s body (TopStackFrame=%p)\n", 
        StructIdentifier, (void*)pc->TopStackFrame);
+#endif
     do {
         TypeParse(Parser, &MemberType, &MemberIdentifier, NULL);
         if (MemberType == NULL || MemberIdentifier == NULL)
