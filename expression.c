@@ -1502,6 +1502,115 @@ static void HandleMemberFunctionCall(struct ParseState *Parser,
     ExpressionParseFunctionCall(Parser, StackTop, RegisteredName, Parser->Mode == RunModeRun);
 }
 
+void ParseTokenIdentifier(struct ParseState *Parser,struct ExpressionStack **StackTop,struct Value *LexValue,
+    int* PrefixState,int* Precedence,int* IgnorePrecedence)
+{   /* it's a variable, function, member function or a macro */
+    const char *TokenName = LexValue->Val->Identifier;
+#ifdef VERBOSE
+    printf("DEBUG: TokenIdentifier: '%s'\n", TokenName);
+#endif
+#ifdef MAGIC
+    if(!strcmp(TokenName,"foo"))
+    {   puts("MAGIC: TokenIdentifier: foo");
+    }
+#endif
+    if (!*PrefixState)
+        ProgramFail(Parser, "identifier not expected here");
+    char* mangle_name = StrdupMangleName(Parser, StackTop, TokenName);
+
+#if 0
+    if (!*PrefixState)
+        ProgramFail(Parser, "identifier not expected here");
+    /* Check if followed by .identifier( for member function */
+    char MemberName[255];
+    if (IsMemberFunction(Parser,MemberName)) {
+        /* Variable is already on stack - handle member call */
+        HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
+    }
+    /* Check if followed by .identifier( for member function */
+    char mangle_name = StrdupMangleName(Parser, &StackTop, TokenName);
+    char* StrdupMangleName(struct ParseState *Parser,  struct ExpressionStack **StackTop,
+const char *TokenName)
+    if (IsMemberFunction(Parser,MemberName)) {
+        /* Variable is already on stack - handle member call */
+        HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
+    }
+    else
+#endif
+
+    enum LexToken token = LexGetToken(Parser, NULL, false);
+    if (token == TokenOpenParen) {
+        /* It's a function call */
+#ifdef VERBOSE
+    printf("DEBUG: It's a regular function call: %s\n", TokenName);
+#endif
+    ExpressionParseFunctionCall(Parser, StackTop,
+        TokenName,
+        Parser->Mode == RunModeRun && *Precedence < *IgnorePrecedence);
+                    
+    } else {
+        /* It's a variable reference */
+#ifdef VERBOSE
+    fprintf(stderr, "DEBUG: It's a variable: %s\n", TokenName);
+    fflush(stderr);
+#endif
+        if (Parser->Mode == RunModeRun) {
+            struct Value *VariableValue = NULL;
+#ifdef MAGIC
+    if (strcmp(TokenName, "Foo_hello") == 0)
+    {    printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
+    }
+#endif
+            VariableGet(Parser->pc, Parser, TokenName, &VariableValue);
+#ifdef VERBOSE2
+        fprintf(stderr, "DEBUG: Got variable, Typ->Base = %d\n", VariableValue->Typ->Base);
+        fflush(stderr);
+#endif
+        if (VariableValue->Typ->Base == TypeMacro) 
+        {   /* evaluate a macro */
+            struct ParseState MacroParser;
+            struct Value *MacroResult;
+            ParserCopy(&MacroParser, &VariableValue->Val->MacroDef.Body);
+            MacroParser.Mode = Parser->Mode;
+            if (VariableValue->Val->MacroDef.NumParams != 0)
+                ProgramFail(&MacroParser, "macro arguments missing");
+            if (!ExpressionParse(&MacroParser, &MacroResult) ||
+                    LexGetToken(&MacroParser, NULL, false) !=
+                        TokenEndOfFunction)
+                ProgramFail(&MacroParser, "expression expected");
+            ExpressionStackPushValueNode(Parser, StackTop, MacroResult);
+        } 
+        else if (VariableValue->Typ == &Parser->pc->VoidType) 
+        {   ProgramFail(Parser, "a void value isn't much use here");            
+        } 
+        else 
+        {   /* Push variable onto stack */
+#ifdef VERBOSE2
+            fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", TokenName);
+            fflush(stderr);
+#endif
+            ExpressionStackPushLValue(Parser, StackTop, VariableValue, 0);
+#if 0
+            /* Check if followed by .identifier( for member function */
+            const char *MemberName = NULL;
+            if (IsMemberFunction(Parser, &MemberName)) {
+                /* Variable is already on stack - handle member call */
+                HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
+            }
+#endif
+            }
+        } 
+        else 
+        {   /* push a dummy value */
+            ExpressionPushInt(Parser, StackTop, 0);
+        }
+    }
+    /* if we've successfully ignored the RHS turn ignoring off */
+    if (*Precedence <= *IgnorePrecedence)
+        *IgnorePrecedence = DEEP_PRECEDENCE;
+    *PrefixState = false;
+}
+
 /* parse an expression with operator precedence */
 int ExpressionParse(struct ParseState *Parser, struct Value **Result)
 {
@@ -1709,121 +1818,9 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 } else
                     ProgramFail(Parser, "operator not expected here");
             }
-       } else if (Token == TokenIdentifier) {
-            /* it's a variable, function, member function or a macro */
-            const char *TokenName = LexValue->Val->Identifier;
-#ifdef VERBOSE
-            printf("DEBUG: TokenIdentifier: '%s'\n", TokenName);
-#endif
-#ifdef MAGIC
-            if(!strcmp(TokenName,"foo"))
-            {   puts("MAGIC: TokenIdentifier: foo");
-            }
-#endif
-            if (!PrefixState)
-                ProgramFail(Parser, "identifier not expected here");
-            char* mangle_name = StrdupMangleName(Parser, &StackTop, TokenName);
-
-#if 0
-            if (!PrefixState)
-                ProgramFail(Parser, "identifier not expected here");
-            /* Check if followed by .identifier( for member function */
-            char MemberName[255];
-            if (IsMemberFunction(Parser,MemberName)) {
-                /* Variable is already on stack - handle member call */
-                HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
-            }
-
-            /* Check if followed by .identifier( for member function */
-
-            char mangle_name = StrdupMangleName(Parser, &StackTop, TokenName);
-
-
-            char* StrdupMangleName(struct ParseState *Parser,  struct ExpressionStack **StackTop,
-    const char *TokenName)
-            if (IsMemberFunction(Parser,MemberName)) {
-                /* Variable is already on stack - handle member call */
-                HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
-            }
-            else
-#endif
-
-            {   enum LexToken token = LexGetToken(Parser, NULL, false);
-                if (token == TokenOpenParen) {
-                    /* It's a function call */
-#ifdef VERBOSE
-                printf("DEBUG: It's a regular function call: %s\n", TokenName);
-#endif
-                ExpressionParseFunctionCall(Parser, &StackTop,
-                    TokenName,
-                    Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
-                    
-                } else {
-                    /* It's a variable reference */
-#ifdef VERBOSE
-                fprintf(stderr, "DEBUG: It's a variable: %s\n", TokenName);
-                fflush(stderr);
-#endif
-                    if (Parser->Mode == RunModeRun) {
-                        struct Value *VariableValue = NULL;
-#ifdef MAGIC
-if (strcmp(TokenName, "Foo_hello") == 0) {
-    printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
-}
-#endif
-                        VariableGet(Parser->pc, Parser, TokenName, &VariableValue);
-#ifdef VERBOSE2
-                    fprintf(stderr, "DEBUG: Got variable, Typ->Base = %d\n", VariableValue->Typ->Base);
-                    fflush(stderr);
-#endif
-                    if (VariableValue->Typ->Base == TypeMacro) {
-                        /* evaluate a macro */
-                        struct ParseState MacroParser;
-                        struct Value *MacroResult;
-
-                        ParserCopy(&MacroParser, &VariableValue->Val->MacroDef.Body);
-                        MacroParser.Mode = Parser->Mode;
-                        if (VariableValue->Val->MacroDef.NumParams != 0)
-                            ProgramFail(&MacroParser, "macro arguments missing");
-
-                        if (!ExpressionParse(&MacroParser, &MacroResult) ||
-                                LexGetToken(&MacroParser, NULL, false) !=
-                                    TokenEndOfFunction)
-                            ProgramFail(&MacroParser, "expression expected");
-
-                        ExpressionStackPushValueNode(Parser, &StackTop, MacroResult);
-                        
-                    } else if (VariableValue->Typ == &Parser->pc->VoidType) {
-                        ProgramFail(Parser, "a void value isn't much use here");
-                        
-                    } else {
-                        /* Push variable onto stack */
-#ifdef VERBOSE2
-                        fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", TokenName);
-                        fflush(stderr);
-#endif
-                        ExpressionStackPushLValue(Parser, &StackTop, VariableValue, 0);
-#if 0
-                        /* Check if followed by .identifier( for member function */
-                        const char *MemberName = NULL;
-                        if (IsMemberFunction(Parser, &MemberName)) {
-                            /* Variable is already on stack - handle member call */
-                            HandleMemberFunctionCall(Parser, &StackTop, TokenName, MemberName);
-                        }
-#endif
-                        }
-                    } else {
-                        /* push a dummy value */
-                        ExpressionPushInt(Parser, &StackTop, 0);
-                    }
-                }
-            }
-             /* if we've successfully ignored the RHS turn ignoring off */
-            if (Precedence <= IgnorePrecedence)
-                IgnorePrecedence = DEEP_PRECEDENCE;
-
-            PrefixState = false;
-        } else if ((int)Token > TokenCloseParen &&
+       } else if (Token == TokenIdentifier) 
+       {    ParseTokenIdentifier(Parser,&StackTop,LexValue,&PrefixState,&Precedence,&IgnorePrecedence);
+       } else if ((int)Token > TokenCloseParen &&
                                         (int)Token <= TokenCharacterConstant) {
             /* it's a value of some sort, push it */
             if (!PrefixState)
