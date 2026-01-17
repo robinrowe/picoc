@@ -3,7 +3,8 @@
 
 #include "picoc.h"
 #include "interpreter.h"
-
+#include "platform.h"
+#include "table.h"
 
 static void PrintSourceTextErrorLine(IOFILE *Stream, const char *FileName,
         const char *SourceText, int Line, int CharacterPos);

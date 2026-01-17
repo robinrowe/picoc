@@ -2,6 +2,11 @@
 
 #include "picoc.h"
 #include "interpreter.h"
+#include "table.h"
+#include "variable.h"
+#include "heap.h"
+#include "lex.h"
+#include "platform.h"
 
 #define isCidstart(c) (isalpha(c) || (c)=='_' || (c)=='#')
 #define isCident(c) (isalnum(c) || (c)=='_')
@@ -761,7 +766,7 @@ enum LexToken LexGetRawToken(struct ParseState *Parser, struct Value **Value,
                 } else
                     Prompt = INTERACTIVE_PROMPT_LINE;
 
-                if (PlatformGetLine(&LineBuffer[0], LINEBUFFER_MAX, Prompt) == NULL)
+                if (PlatformGetLine(&LineBuffer[0], LINEBUFFER_MAX, Prompt) == 0)
                     return TokenEOF;
 
                 /* put the new line at the end of the linked list of interactive lines */

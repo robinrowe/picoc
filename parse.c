@@ -1,6 +1,11 @@
 /* picoc parser - parses source and executes statements */
 #include "picoc.h"
 #include "interpreter.h"
+#include "variable.h"
+#include "table.h"
+#include "lex.h"
+#include "type.h"
+#include "heap.h"
 
 static enum ParseResult ParseStatementMaybeRun(struct ParseState *Parser,
         int Condition, int CheckTrailingSemicolon);
@@ -186,126 +191,6 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     return FuncValue;
 }
 
-#if 0
-/* parse a member function definition inside a struct */
-struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier)
-{
-    int ParamCount = 0;
-    char *ParamIdentifier;
-    enum LexToken Token = TokenNone;
-    struct ValueType *ParamType;
-    struct ParseState ParamParser;
-    struct Value *FuncValue;
-    struct Value *OldFuncValue;
-    struct ParseState FuncBody;
-    Picoc *pc = Parser->pc;
-
-    if (StructType == NULL || StructType->Base != TypeStruct)
-        ProgramFail(Parser, "member functions can only be defined in structs");
-
-    LexGetToken(Parser, NULL, true);  /* open bracket */
-    ParserCopy(&ParamParser, Parser);
-    ParamCount = ParseCountParams(Parser);
-    if (ParamCount > PARAMETER_MAX)
-        ProgramFail(Parser, "too many parameters (%d allowed)", PARAMETER_MAX);
-
-    /* allocate the function value */
-    FuncValue = VariableAllocValueAndData(pc, Parser,
-        sizeof(struct FuncDef) + sizeof(struct ValueType*)*ParamCount +
-        sizeof(const char*)*ParamCount,
-        false, NULL, true);
-    FuncValue->Typ = &pc->FunctionType;
-    FuncValue->Val->FuncDef.ReturnType = ReturnType;
-    FuncValue->Val->FuncDef.NumParams = ParamCount;
-    FuncValue->Val->FuncDef.VarArgs = false;
-    FuncValue->Val->FuncDef.Intrinsic = NULL;  /* not an intrinsic function */
-    FuncValue->Val->FuncDef.ParamType =
-        (struct ValueType**)((char*)FuncValue->Val+sizeof(struct FuncDef));
-    FuncValue->Val->FuncDef.ParamName =
-        (char**)((char*)FuncValue->Val->FuncDef.ParamType +
-            sizeof(struct ValueType*)*ParamCount);
-
-    /* parse parameter list */
-    for (ParamCount = 0; ParamCount < FuncValue->Val->FuncDef.NumParams; ParamCount++) {
-        /* harvest the parameters into the function definition */
-        if (ParamCount == FuncValue->Val->FuncDef.NumParams-1 &&
-                LexGetToken(&ParamParser, NULL, false) == TokenEllipsis) {
-            /* ellipsis at end */
-            FuncValue->Val->FuncDef.NumParams--;
-            FuncValue->Val->FuncDef.VarArgs = true;
-            break;
-        } else {
-            /* add a parameter */
-            TypeParse(&ParamParser, &ParamType, &ParamIdentifier, NULL);
-            if (ParamType->Base == TypeVoid) {
-                /* this isn't a real parameter at all - delete it */
-                FuncValue->Val->FuncDef.NumParams--;
-            } else {
-                FuncValue->Val->FuncDef.ParamType[ParamCount] = ParamType;
-                FuncValue->Val->FuncDef.ParamName[ParamCount] = ParamIdentifier;
-            }
-        }
-
-        Token = LexGetToken(&ParamParser, NULL, true);
-        if (Token != TokenComma && ParamCount < FuncValue->Val->FuncDef.NumParams-1)
-            ProgramFail(&ParamParser, "comma expected");
-    }
-
-    if (FuncValue->Val->FuncDef.NumParams != 0 && Token != TokenCloseParen &&
-            Token != TokenComma && Token != TokenEllipsis)
-        ProgramFail(&ParamParser, "bad parameter");
-
-    /* look for a function body */
-    Token = LexGetToken(Parser, NULL, false);
-    if (Token == TokenSemicolon) {
-        LexGetToken(Parser, NULL, true);  /* it's a prototype, absorb the trailing semicolon */
-    } else {
-        /* it's a full function definition with a body */
-        if (Token != TokenLeftBrace)
-            ProgramFail(Parser, "bad member function definition");
-
-        ParserCopy(&FuncBody, Parser);
-        if (ParseStatementMaybeRun(Parser, false, true) != ParseResultOk)
-            ProgramFail(Parser, "member function body expected");
-
-        FuncValue->Val->FuncDef.Body = FuncBody;
-        FuncValue->Val->FuncDef.Body.Pos = LexCopyTokens(&FuncBody, Parser);
-#if 0
-        /* check if this member function is already defined */
-        if (StructType->MemberFunctions != NULL &&
-            TableGet(StructType->MemberFunctions, Identifier, &OldFuncValue, NULL, NULL, NULL)) {
-            ProgramFail(Parser, "member function '%s' is already defined", Identifier);
-        }
-#endif
-    }
-#if 0
-    /* add to struct's MemberFunctions table */
-    if (StructType->MemberFunctions == NULL) {
-        StructType->ThisPtr = HeapAllocMem(pc, sizeof(*StructType->ThisPtr));
-        if (StructType->ThisPtr == NULL)
-            ProgramFail(Parser, "out of memory");
-        /* Allocate the table structure and hash table array */
-        struct TableEntry **HashTable;
-        StructType->MemberFunctions = HeapAllocMem(pc, sizeof(struct Table));
-        if (StructType->MemberFunctions == NULL)
-            ProgramFail(Parser, "out of memory");
-        
-        /* Allocate hash table array */
-        HashTable = HeapAllocMem(pc, sizeof(struct TableEntry*) * MEMBER_FUNCTION_TABLE_SIZE);
-        if (HashTable == NULL)
-            ProgramFail(Parser, "out of memory");
-        
-        TableInitTable(StructType->MemberFunctions, HashTable, MEMBER_FUNCTION_TABLE_SIZE, true);
-    }
-
-    TableSet(pc, StructType->MemberFunctions, Identifier, FuncValue,
-        (char*)Parser->FileName, Parser->Line, Parser->CharacterPos);
-#endif
-    return FuncValue;
-}
-#else
-
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser, 
     struct ValueType *StructType, 
     struct ValueType *ReturnType, 
@@ -315,16 +200,20 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
     char MangledName[256];
     
     /* Create mangled name: StructName_MemberName */
+    /* Example: struct Foo { void hello() } becomes Foo_hello */
     snprintf(MangledName, sizeof(MangledName), "%s_%s", 
              StructType->Identifier, MemberName);
     
     /* Register the mangled name in the string table */
     char *RegisteredName = TableStrRegister(pc, MangledName);
     
+    printf("DEBUG: Defining member function %s as global %s\n", MemberName, RegisteredName);
+    
     /* Parse as a regular global function with the mangled name */
+    /* The parser is already positioned at the '(' after the function name */
     return ParseFunctionDefinition(Parser, ReturnType, RegisteredName);
 }
-#endif
+
 
 /* parse an array initializer and assign to a variable */
 int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,

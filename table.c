@@ -2,7 +2,9 @@
  * and the shared string table. */
 
 #include "interpreter.h"
-
+#include "table.h"
+#include "variable.h"
+#include "heap.h"
 
 static unsigned int TableHash(const char *Key, int Len);
 static struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,

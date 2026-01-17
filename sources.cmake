@@ -2,6 +2,17 @@ README.md
 sources.cmake
 LICENSE.h
 interpreter.h
+clibrary.h
+expression.h
+heap.h
+include.h
+lex.h
+parse.h
+picoc.h
+platform.h
+table.h
+type.h
+variable.h
 picoc.h
 platform.h
 clibrary.c

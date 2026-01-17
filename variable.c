@@ -2,6 +2,9 @@
  * variables */
 
 #include "interpreter.h"
+#include "heap.h"
+#include "table.h"
+#include "variable.h"
 
 /* maximum size of a value to temporarily copy while we create a variable */
 #define MAX_TMP_COPY_BUF (256)

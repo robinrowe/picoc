@@ -1,7 +1,9 @@
 /*  */
 #include "picoc.h"
 #include "interpreter.h"
-
+#include "table.h"
+#include "lex.h"
+#include "parse.h"
 
 /* endian-ness checking */
 static const int __ENDIAN_CHECK__ = 1;

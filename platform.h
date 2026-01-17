@@ -13,6 +13,7 @@
 #include <setjmp.h>
 #include <math.h>
 #include <stdbool.h>
+#include "parse.h"
 
 /* host platform includes */
 #ifdef UNIX_HOST
@@ -71,5 +72,32 @@
 #define INTERACTIVE_PROMPT_LINE "     > "
 
 extern jmp_buf ExitBuf;
+
+
+/* platform.h */
+/* the following are defined in picoc.h:
+ * void PicocCallMain(int argc, char **argv);
+ * int PicocPlatformSetExitPoint();
+ * void PicocInitialize(int StackSize);
+ * void PicocCleanup();
+ * void PicocPlatformScanFile(const char *FileName);
+ * int PicocExitValue; */
+void ProgramFail(struct ParseState *Parser, const char *Message, ...);
+void ProgramFailNoParser(Picoc *pc, const char *Message, ...);
+void AssignFail(struct ParseState *Parser, const char *Format,
+    struct ValueType *Type1, struct ValueType *Type2, int Num1, int Num2,
+    const char *FuncName, int ParamNo);
+void LexFail(Picoc *pc, struct LexState *Lexer, const char *Message, ...);
+void PlatformInit(Picoc *pc);
+void PlatformCleanup(Picoc *pc);
+char *PlatformGetLine(char *Buf, int MaxLen, const char *Prompt);
+int PlatformGetCharacter();
+void PlatformPutc(unsigned char OutCh, union OutputStreamInfo *);
+void PlatformPrintf(IOFILE *Stream, const char *Format, ...);
+void PlatformVPrintf(IOFILE *Stream, const char *Format, va_list Args);
+void PlatformExit(Picoc *pc, int ExitVal);
+char *PlatformMakeTempName(Picoc *pc, char *TempNameBuffer);
+void PlatformLibraryInit(Picoc *pc);
+
 
 #endif /* PLATFORM_H */

@@ -4,6 +4,8 @@
 #include <inttypes.h>
 
 #include "../interpreter.h"
+#include "../type.h"
+#include "../table.h"
 
 #define MAX_FORMAT (80)
 #define MAX_SCANF_ARGS (10)

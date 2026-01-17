@@ -2,7 +2,9 @@
  * for parsing data types. */
 
 #include "interpreter.h"
-
+#include "variable.h"
+#include "platform.h"
+#include "type.h"
 
 static struct ValueType *TypeAdd(Picoc *pc, struct ParseState *Parser,
     struct ValueType *ParentType, enum BaseType Base, int ArraySize,
@@ -241,7 +243,7 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     Picoc *pc = Parser->pc;
     struct Value *LexValue;
     struct ValueType *MemberType;
-
+    printf("DEBUG: TypeParseStruct called for struct (TopStackFrame=%p)\n", (void*)pc->TopStackFrame);
     Token = LexGetToken(Parser, &LexValue, false);
     if (Token == TokenIdentifier) {
         LexGetToken(Parser, &LexValue, true);
@@ -260,11 +262,8 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     Token = LexGetToken(Parser, NULL, false);
     if (Token != TokenLeftBrace) {
         /* use the already defined structure */
-#if 0
-        if ((*Typ)->Members == NULL)
-            ProgramFail(Parser, "structure '%s' isn't defined",
-                LexValue->Val->Identifier);
-#endif
+        printf("DEBUG: Reusing already-defined struct %s (Members=%p)\n", 
+               StructIdentifier, (void*)(*Typ)->Members);
         return;
     }
 

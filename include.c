@@ -3,7 +3,9 @@
 
 #include "picoc.h"
 #include "interpreter.h"
-
+#include "include.h"
+#include "table.h"
+#include "heap.h"
 
 /* initialize the built-in include libraries */
 void IncludeInit(Picoc *pc)
