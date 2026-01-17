@@ -406,6 +406,8 @@ int VariableDefined(Picoc *pc, const char *Ident)
 void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
     struct Value **LVal)
 {
+    printf("DEBUG: VariableGet searching for '%s', TopStackFrame=%p\n", 
+       Ident, (void*)pc->TopStackFrame);
     /* First check if we have a special 'this' keyword */
     if (strcmp(Ident, "this") == 0 && pc->TopStackFrame != NULL && 
         pc->TopStackFrame->HasThis) {

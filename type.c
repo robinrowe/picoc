@@ -278,7 +278,8 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     TableInitTable((*Typ)->Members,
         (struct TableEntry**)((char*)(*Typ)->Members + sizeof(struct Table)),
         STRUCT_TABLE_SIZE, true);
-
+    printf("DEBUG: About to parse struct %s body (TopStackFrame=%p)\n", 
+       StructIdentifier, (void*)pc->TopStackFrame);
     do {
         TypeParse(Parser, &MemberType, &MemberIdentifier, NULL);
         if (MemberType == NULL || MemberIdentifier == NULL)

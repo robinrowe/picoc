@@ -7,6 +7,8 @@
 #include "type.h"
 #include "heap.h"
 
+#define VERBOSE
+
 static enum ParseResult ParseStatementMaybeRun(struct ParseState *Parser,
         int Condition, int CheckTrailingSemicolon);
 static int ParseCountParams(struct ParseState *Parser);
@@ -188,6 +190,14 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
                 (char*)Parser->FileName, Parser->Line, Parser->CharacterPos))
         ProgramFail(Parser, "'%s' is already defined", Identifier);
 
+printf("DEBUG: ParseFunctionDefinition completed for '%s', checking if it was registered...\n", Identifier);
+struct Value *TestValue;
+if (TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) {
+    printf("DEBUG: SUCCESS - '%s' is in GlobalTable!\n", Identifier);
+} else {
+    printf("DEBUG: FAILURE - '%s' is NOT in GlobalTable!\n", Identifier);
+}
+
     return FuncValue;
 }
 
@@ -195,7 +205,7 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
     struct ValueType *StructType, 
     struct ValueType *ReturnType, 
     char *MemberName)
-{
+{   printf("DEBUG: ParseMemberFunctionDefinition START for member '%s'\n", MemberName);
     Picoc *pc = Parser->pc;
     char MangledName[256];
     
@@ -206,11 +216,15 @@ struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
     
     /* Register the mangled name in the string table */
     char *RegisteredName = TableStrRegister(pc, MangledName);
-    
+#ifdef VERBOSE
     printf("DEBUG: Defining member function %s as global %s\n", MemberName, RegisteredName);
-    
+    struct Value *TestLookup;
+ //   VariableGet(pc, Parser, RegisteredName, &TestLookup);// terminates if not found!
+ //   printf("DEBUG: SUCCESS - %s is now defined and findable!\n", RegisteredName); 
+#endif
     /* Parse as a regular global function with the mangled name */
     /* The parser is already positioned at the '(' after the function name */
+    printf("DEBUG: ParseMemberFunctionDefinition END for member '%s'\n", MemberName);
     return ParseFunctionDefinition(Parser, ReturnType, RegisteredName);
 }
 

@@ -9,6 +9,7 @@
 #include "expression.h"
 
 #define VERBOSE
+//#define DEBUG_EXPRESSIONS
 
 /* whether evaluation is left to right for a given precedence level */
 #define IS_LEFT_TO_RIGHT(p) ((p) != 2 && (p) != 14)
@@ -136,6 +137,9 @@ int IsTypeToken(struct ParseState *Parser, enum LexToken t,
         /* see TypeParseFront, case TokenIdentifier and ParseTypedef */
         struct Value * VarValue;
         if (VariableDefined(Parser->pc, LexValue->Val->Pointer)) {
+if (strcmp(LexValue->Val->Pointer, "Foo_hello") == 0) {
+    printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
+}
             VariableGet(Parser->pc, Parser, LexValue->Val->Pointer, &VarValue);
             if (VarValue->Typ == &Parser->pc->TypeType)
                 return 1;
@@ -1337,12 +1341,6 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
     struct Value *ParamVal = (*StackTop)->Val;
     struct Value *StructVal = ParamVal;
     struct ValueType *StructType = ParamVal->Typ;
-#if 0
-    struct Value *MemberFunc = NULL;
-    char *DerefDataLoc = (char *)ParamVal->Val;
-    char *ThisPtr = 0;
-    int isThis = 0;
-#endif
     struct Value *Ident;
 
 #ifdef VERBOSE
@@ -1359,58 +1357,17 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
 
     /* if we're doing '->' dereference the struct pointer first */
     if (Token == TokenArrow)
-#if 0
-        /*DerefDataLoc*/ StructType->ThisPtr = VariableDereferencePointer(ParamVal, &StructVal,
-            NULL, &StructType, NULL);
-#else
-//        StructType->isThis = 1;
-#endif
-    if (StructType->Base != TypeStruct)
-        ProgramFail(Parser, "member functions can only be called on structs (got %t)", StructType);
-#if 0
-    /* look up the member function in the MemberFunctions table using the passed-in name */
-    if (StructType->MemberFunctions == NULL ||
-        !TableGet(StructType->MemberFunctions, MemberName, &MemberFunc, NULL, NULL, NULL))
-        ProgramFail(Parser, "struct %s doesn't have a member function called '%s'",
-            StructType->Identifier, MemberName);
-
-    if (MemberFunc->Typ->Base != TypeFunction)
-        ProgramFail(Parser, "%s is not a function", MemberName);
-#endif
+        if (StructType->Base != TypeStruct)
+            ProgramFail(Parser, "member functions can only be called on structs (got %t)", StructType);
     /* Pop the struct from expression stack AND heap together */
     HeapPopStack(Parser->pc, ParamVal,
         sizeof(struct ExpressionStack) +
         sizeof(struct Value) +
         TypeStackSizeValue(StructVal));
     *StackTop = (*StackTop)->Next;
-#if 0
-    /* IMMEDIATELY allocate ThisPtr on heap (preserves LIFO order) */
-    /* This must happen RIGHT AFTER the pop, before anything else */
-    struct Value *ThisPtr = VariableAllocValueFromType(Parser->pc, Parser,
-        TypeGetMatching(Parser->pc, Parser, StructType, TypePointer, 0, 
-                        Parser->pc->StrEmpty, true),
-        false, NULL, true);  /* OnHeap = true - goes on heap top */
-
-    ThisPtr->Val->Pointer = (void*)DerefDataLoc;
-
- //   StructType->ThisPtr = DerefDataLoc;
-    /* Now cache everything for the function call */
-    Parser->pc->MemberFunctionCache = MemberFunc;
-    Parser->pc->MemberThisPtrCache = (void*)DerefDataLoc;
-    Parser->pc->MemberThisTypeCache = StructType;
-#endif
     /* Call the member function */
-//    MemberName = MakeMemberFunctionName(StructType->Identifier,MemberName);
     ExpressionParseFunctionCall(Parser, StackTop, MemberName, Parser->Mode == RunModeRun);
-//    free(MemberName);
-#if 0
-    /* Clear caches */
-    Parser->pc->MemberFunctionCache = NULL;
-    Parser->pc->MemberThisPtrCache = NULL;
-    Parser->pc->MemberThisTypeCache = NULL;
-#endif
 }
-
 
 // ============================================================================
 // NEW HELPER FUNCTION 1: Check if we should handle this as a member function call
@@ -1423,21 +1380,16 @@ static int CheckMemberFunctionPattern(struct ParseState *Parser,
     struct Value *MemberIdent = NULL;
     struct ParseState PeekState;
     ParserCopy(&PeekState, Parser);
-    
     /* Check for .identifier( pattern */
     if (LexGetToken(&PeekState, NULL, true) != TokenDot)
         return 0;
-    
     if (LexGetToken(&PeekState, &MemberIdent, true) != TokenIdentifier)
         return 0;
-    
     if (LexGetToken(&PeekState, NULL, false) != TokenOpenParen)
         return 0;
-    
     /* It's a member function call! */
     if (OutMemberName != NULL)
         *OutMemberName = MemberIdent->Val->Identifier;
-    
     return 1;
 }
 
@@ -1451,23 +1403,39 @@ static void HandleMemberFunctionCall(struct ParseState *Parser,
                                      const char *MemberName)
 {
     char FuncCallName[256];
+    struct Value *ObjectValue;
+    const char *TypeName;
     
 #ifdef VERBOSE
     fprintf(stderr, "DEBUG: Handling member function call: %s.%s\n", 
            ObjectName, MemberName);
     fflush(stderr);
 #endif
+
+    /* Get the object variable to find its type */
+    VariableGet(Parser->pc, Parser, ObjectName, &ObjectValue);
+    
+    /* Get the struct type name */
+    if (ObjectValue->Typ->Base != TypeStruct)
+        ProgramFail(Parser, "'%s' is not a struct", ObjectName);
+    
+    TypeName = ObjectValue->Typ->Identifier;
+    
+    /* Mangle: Foo_hello */
+    snprintf(FuncCallName, sizeof(FuncCallName), "%s_%s", TypeName, MemberName);
     
     /* Consume the . and member name tokens from real parser */
     LexGetToken(Parser, NULL, true);   /* consume . */
     LexGetToken(Parser, NULL, true);   /* consume member name */
     
-    /* Build "foo.hello" string */
-    snprintf(FuncCallName, sizeof(FuncCallName), "%s.%s",
-            ObjectName, MemberName);
+#ifdef VERBOSE
+    fprintf(stderr, "DEBUG: Member call %s.%s -> mangled to %s (RunModeRun = %d)\n",
+            ObjectName, MemberName, FuncCallName, Parser->Mode);
+    fflush(stderr);
+#endif
     
     /* Call with struct already on stack */
-    ExpressionParseFunctionCall(Parser, StackTop, FuncCallName, true);
+    ExpressionParseFunctionCall(Parser, StackTop, FuncCallName, Parser->Mode == RunModeRun);
 }
 
 /* parse an expression with operator precedence */
@@ -1677,7 +1645,6 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 } else
                     ProgramFail(Parser, "operator not expected here");
             }
-#if 1
        } else if (Token == TokenIdentifier) {
             /* it's a variable, function or a macro */
             const char *ObjectName = LexValue->Val->Identifier;
@@ -1712,7 +1679,9 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 
                 if (Parser->Mode == RunModeRun) {
                     struct Value *VariableValue = NULL;
-
+if (strcmp(ObjectName, "Foo_hello") == 0) {
+    printf("DEBUG: VariableGet called for Foo_hello from line %d\n", __LINE__);
+}
                     VariableGet(Parser->pc, Parser, ObjectName, &VariableValue);
                     
 #ifdef VERBOSE
@@ -1765,169 +1734,6 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
                 IgnorePrecedence = DEEP_PRECEDENCE;
 
             PrefixState = false;
-#endif
-
-#if 0
-        } else if (Token == TokenIdentifier) 
-        {   const char *ObjectName = LexValue->Val->Identifier;
-            /* it's a variable, function or a macro */
-#ifdef VERBOSE
-            fprintf(stderr, "DEBUG: TokenIdentifier seen: '%s'\n", ObjectName);
-            fflush(stderr);
-#endif
-
-            if (!PrefixState)
-                ProgramFail(Parser, "identifier not expected here");
-            
-            enum LexToken token = LexGetToken(Parser, NULL, false);
-            
-            /* Peek ahead to see if next is .identifier( for member function call */
-            struct Value *MemberIdent = NULL;
-            struct ParseState PeekState;
-            ParserCopy(&PeekState, Parser);
-            int is_member_function_call = 0;
-            char FuncCallName[256];
-            
-            enum LexToken token1 = LexGetToken(&PeekState, NULL, true);  /* consume dot or other */
-            enum LexToken token2 = 0;
-            enum LexToken token3 = 0;
-            
-            if (token1 == TokenDot)
-            {   token2 = LexGetToken(&PeekState, &MemberIdent, true);  /* CAPTURE identifier after dot */
-                if(token2 == TokenIdentifier) 
-                {   token3 = LexGetToken(&PeekState, NULL, false);
-                    if(token3 == TokenOpenParen) 
-                    {   is_member_function_call = 1;
-                        /* Build "foo.hello" string */
-                        snprintf(FuncCallName, sizeof(FuncCallName), "%s.%s",
-                                ObjectName,        /* foo */
-                                MemberIdent->Val->Identifier);    /* hello */
-                        /* NOW consume the tokens for real from the actual Parser */
-                        LexGetToken(Parser, NULL, true);   /* consume the . */
-                        LexGetToken(Parser, NULL, true);   /* consume hello */
-            }   }   }
-            
-            if (token == TokenOpenParen || is_member_function_call ) {
-#ifdef VERBOSE
-                const char* type = is_member_function_call ? "member":"regular";
-                const char* name = is_member_function_call ? FuncCallName : ObjectName;
-                fprintf(stderr, "DEBUG: It's a %s function call: %s\n", type, name);
-                fflush(stderr);
-#endif
-                if (is_member_function_call && Parser->Mode == RunModeRun) {
-                    /* Look up the object variable and push it onto stack */
-                    struct Value *ObjectVar = NULL;
-                    VariableGet(Parser->pc, Parser, ObjectName, &ObjectVar);
-                    ExpressionStackPushLValue(Parser, &StackTop, ObjectVar, 0);
-                }
-                ExpressionParseFunctionCall(Parser, &StackTop,
-                    is_member_function_call ? FuncCallName : ObjectName,
-                    Parser->Mode == RunModeRun && Precedence < IgnorePrecedence);
-            } else {
-#ifdef VERBOSE
-                fprintf(stderr, "DEBUG: It's a variable: %s\n",ObjectName);
-                fflush(stderr);
-#endif
-                
-                if (Parser->Mode == RunModeRun) {
-                    struct Value *VariableValue = NULL;
-
-                    VariableGet(Parser->pc, Parser, ObjectName,
-                        &VariableValue);
-                    
-#ifdef VERBOSE
-                    fprintf(stderr, "DEBUG: Got variable, Typ->Base = %d\n", VariableValue->Typ->Base);
-                    fflush(stderr);
-#endif
-                    if (VariableValue->Typ->Base == TypeMacro) {
-                        /* evaluate a macro as a kind of simple subroutine */
-                        struct ParseState MacroParser;
-                        struct Value *MacroResult;
-
-                        ParserCopy(&MacroParser, &VariableValue->Val->MacroDef.Body);
-                        MacroParser.Mode = Parser->Mode;
-                        if (VariableValue->Val->MacroDef.NumParams != 0)
-                            ProgramFail(&MacroParser, "macro arguments missing");
-
-                        if (!ExpressionParse(&MacroParser, &MacroResult) ||
-                                LexGetToken(&MacroParser, NULL, false) !=
-                                    TokenEndOfFunction)
-                            ProgramFail(&MacroParser, "expression expected");
-
-                        ExpressionStackPushValueNode(Parser, &StackTop, MacroResult);
-                    } else if (VariableValue->Typ == &Parser->pc->VoidType)
-                        ProgramFail(Parser, "a void value isn't much use here");
-                    else {
-#ifdef VERBOSE
-                        fprintf(stderr, "DEBUG: Pushing variable '%s' onto stack\n", ObjectName);
-                        fprintf(stderr, "DEBUG: VariableValue->Typ->Base = %d\n", VariableValue->Typ->Base);
-                        fflush(stderr);
-#endif
-                        
-                        ExpressionStackPushLValue(Parser, &StackTop,
-                        VariableValue, 0); /* it's a value variable */
-                        
-#ifdef VERBOSE
-                        if (StackTop != NULL && StackTop->Val != NULL) {
-                            fprintf(stderr, "DEBUG: After push, StackTop->Val->Typ->Base = %d\n", StackTop->Val->Typ->Base);
-                        }
-                        fflush(stderr);
-#endif
-                    }
-                } else /* push a dummy value */
-                    ExpressionPushInt(Parser, &StackTop, 0);
-
-            }
-
-             /* if we've successfully ignored the RHS turn ignoring off */
-            if (Precedence <= IgnorePrecedence)
-                IgnorePrecedence = DEEP_PRECEDENCE;
-
-            PrefixState = false;
-#endif
-#if 0
-
-/*
- * When FuncName contains a dot (like "foo.hello"), the struct variable
- * is ALREADY on StackTop. Don't look it up again - just pop it and use it!
- */
-
-    if (RunIt) {
-        char MangledName[256];
-        const char *LookupName = FuncName;
-        
-        /* Check if FuncName contains a dot (member function call like "foo.hello") */
-        const char *DotPos = strchr(FuncName, '.');
-        if (DotPos != NULL) {
-            /* It's a member function call - struct is already on StackTop */
-            
-            /* Pop the struct from the stack */
-            struct Value *StructVar = (*StackTop)->Val;
-            
-            if (StructVar->Typ->Base != TypeStruct)
-                ProgramFail(Parser, "member functions can only be called on structs");
-            
-            /* Build mangled name: StructTypeName_MemberName */
-            const char *MemberName = DotPos + 1;
-            snprintf(MangledName, sizeof(MangledName), "%s_%s",
-                    StructVar->Typ->Identifier, MemberName);
-            LookupName = MangledName;
-            
-#ifdef VERBOSE
-            printf("DEBUG: Member call %s -> mangled to %s\n", FuncName, LookupName);
-#endif
-            
-            /* The struct is already on stack - it will be used as first parameter */
-            /* DON'T pop it yet - leave it there for parameter processing */
-        }
-        
-        /* get the function definition from variable tables */
-#ifdef VERBOSE
-        printf("DEBUG: VariableGet = %s\n", LookupName);
-#endif
-        VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
-
-#endif
         } else if ((int)Token > TokenCloseParen &&
                                         (int)Token <= TokenCharacterConstant) {
             /* it's a value of some sort, push it */
@@ -2073,6 +1879,10 @@ void ExpressionParseMacroCall(struct ParseState *Parser,
 void ExpressionParseFunctionCall(struct ParseState *Parser,
     struct ExpressionStack **StackTop, const char *FuncName, int RunIt)
 {
+            
+#ifdef VERBOSE
+    printf("DEBUG: ExpressionParseFunctionCall: %s\n", FuncName);
+#endif
     int ArgCount;
     enum LexToken Token = LexGetToken(Parser, NULL, true);    /* open bracket */
     enum RunMode OldMode = Parser->Mode;
@@ -2080,7 +1890,6 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
     struct Value *FuncValue = NULL;
     struct Value *Param;
     struct Value **ParamArray = NULL;
-#if 1
     if (RunIt) {
         char MangledName[256];
         const char *LookupName = FuncName;
@@ -2117,55 +1926,15 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
 #ifdef VERBOSE
         printf("DEBUG: VariableGet = %s\n", LookupName);
 #endif
+if (strcmp(LookupName, "Foo_hello") == 0) {
+    printf("DEBUG: VariableGet called for Foo_hello from line %d\n",__LINE__);
+}
+#if 0
         VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
 #else
-    if (RunIt) {
-        char MangledName[256];
-        const char *LookupName = FuncName;
-        
-        /* Check if FuncName contains a dot (member function call like "foo.hello") */
-        const char *DotPos = strchr(FuncName, '.');
-        if (DotPos != NULL) {
-            /* It's a member function call like "foo.hello" */
-            
-            /* Extract the variable name before the dot */
-            char VarName[128];
-            int VarNameLen = DotPos - FuncName;
-            if (VarNameLen >= sizeof(VarName))
-                ProgramFail(Parser, "member function variable name too long");
-            
-            strncpy(VarName, FuncName, VarNameLen);
-            VarName[VarNameLen] = '\0';
-            
-            /* Get the struct variable to find its type */
-            struct Value *StructVar;
-            printf("DEBUG: About to look up variable '%s' (Parser->pc=%p)\n", VarName, (void*)Parser->pc);
-            VariableGet(Parser->pc, Parser, VarName, &StructVar);
-            printf("DEBUG: Found variable '%s', type base=%d\n", VarName, StructVar->Typ->Base);            
-            if (StructVar->Typ->Base != TypeStruct)
-                ProgramFail(Parser, "member functions can only be called on structs");
-            
-            /* Build mangled name: StructTypeName_MemberName */
-            /* "foo.hello" becomes "Foo_hello" */
-            const char *MemberName = DotPos + 1;
-            snprintf(MangledName, sizeof(MangledName), "%s_%s",
-                    StructVar->Typ->Identifier, MemberName);
-            LookupName = MangledName;
-            
-#ifdef VERBOSE
-            printf("DEBUG: Member call %s -> mangled to %s\n", FuncName, LookupName);
-#endif
-            
-            /* Push the struct variable as the first parameter */
-            /* This will be parameter 0 when we parse the rest of the args */
-            ExpressionStackPushValue(Parser, StackTop, StructVar);
-        }
-        
-        /* get the function definition from variable tables */
-#ifdef VERBOSE
-        printf("DEBUG: VariableGet = %s\n", LookupName);
-#endif
-        VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
+        /* Functions are always in GlobalTable - search there directly */
+        if (!TableGet(&Parser->pc->GlobalTable, LookupName, &FuncValue, NULL, NULL, NULL))
+            ProgramFail(Parser, "identifier '%s' is undefined", LookupName);
 #endif
         if (FuncValue->Typ->Base == TypeMacro) {
             /* this is actually a macro, not a function */
@@ -2243,48 +2012,6 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
                 FuncValue->Val->FuncDef.Intrinsic ? FuncValue->Val->FuncDef.NumParams : 0);
             Parser->pc->TopStackFrame->NumParams = ArgCount;
             Parser->pc->TopStackFrame->ReturnValue = ReturnValue;
-#if 0
-            /* If this is a member function call, set up 'this' pointer in the stack frame */
-            if (Parser->pc->MemberThisPtrCache != NULL) {
-                /* Use the embedded ThisValue in the StackFrame */
-                Parser->pc->TopStackFrame->HasThis = true;
-                Parser->pc->TopStackFrame->ThisValue.Typ = TypeGetMatching(Parser->pc, Parser, 
-                    Parser->pc->MemberThisTypeCache, TypePointer, 0, Parser->pc->StrEmpty, true);
-                Parser->pc->TopStackFrame->ThisValue.Val = &Parser->pc->TopStackFrame->ThisData;
-                Parser->pc->TopStackFrame->ThisData.Pointer = Parser->pc->MemberThisPtrCache;
-                Parser->pc->TopStackFrame->ThisValue.ValOnHeap = false;
-                Parser->pc->TopStackFrame->ThisValue.ValOnStack = false;
-                Parser->pc->TopStackFrame->ThisValue.AnyValOnHeap = false;
-                Parser->pc->TopStackFrame->ThisValue.IsLValue = false;
-                Parser->pc->TopStackFrame->ThisValue.LValueFrom = NULL;
-            } else {
-                Parser->pc->TopStackFrame->HasThis = false;
-            }
-
-            /* Function parameters should not go out of scope */
-            Parser->ScopeID = -1;
-#endif
-#if 0
-           Parser->pc->TopStackFrame->NumParams = ArgCount;
-            Parser->pc->TopStackFrame->ReturnValue = ReturnValue;
-
-            /* If this is a member function call, set up 'this' pointer in the stack frame */
-            if (Parser->pc->MemberThisPtrCache != NULL) {
-                /* Use the embedded ThisValue in the StackFrame */
-                Parser->pc->TopStackFrame->HasThis = true;
-                Parser->pc->TopStackFrame->ThisValue.Typ = TypeGetMatching(Parser->pc, Parser, 
-                    Parser->pc->MemberThisTypeCache, TypePointer, 0, Parser->pc->StrEmpty, true);
-                Parser->pc->TopStackFrame->ThisValue.Val = &Parser->pc->TopStackFrame->ThisData;
-                Parser->pc->TopStackFrame->ThisData.Pointer = Parser->pc->MemberThisPtrCache;
-                Parser->pc->TopStackFrame->ThisValue.ValOnHeap = false;
-                Parser->pc->TopStackFrame->ThisValue.ValOnStack = false;
-                Parser->pc->TopStackFrame->ThisValue.AnyValOnHeap = false;
-                Parser->pc->TopStackFrame->ThisValue.IsLValue = false;
-                Parser->pc->TopStackFrame->ThisValue.LValueFrom = NULL;
-            } else {
-                Parser->pc->TopStackFrame->HasThis = false;
-            }
-#endif
             if (Parser->pc->StructType) {
             /* Function parameters should not go out of scope */
                 Parser->ScopeID = -1;
