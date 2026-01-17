@@ -503,4 +503,6 @@ struct Picoc {
 #endif
 };
 
+void PrintLexToken(enum LexToken token);
+
 #endif /* INTERPRETER_H */

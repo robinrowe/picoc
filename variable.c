@@ -272,14 +272,14 @@ int VariableDefinedAndOutOfScope(Picoc *pc, const char* Ident)
     int Count;
     struct TableEntry *Entry;
 
-    struct Table * HashTable = (pc->TopStackFrame == NULL) ?
-        &(pc->GlobalTable) : &(pc->TopStackFrame)->LocalTable;
-
-    for (Count = 0; Count < HashTable->Size; Count++) {
-        for (Entry = HashTable->HashTable[Count]; Entry != NULL;
-            Entry = Entry->Next) {
-            if (Entry->p.v.Val->OutOfScope == true &&
-                    (char*)((intptr_t)Entry->p.v.Key & ~1) == Ident)
+    struct Table * HashTable =  &(pc->GlobalTable);
+    if(pc->TopStackFrame != NULL) 
+    {   HashTable =  &(pc->TopStackFrame)->LocalTable;
+    }
+    for (Count = 0; Count < HashTable->Size; Count++) 
+    {   printf("DEBUG: VariableDefinedAndOutOfScope: %d %s\n",Count,HashTable->HashTable[Count]->p.v.Key);
+        for (Entry = HashTable->HashTable[Count]; Entry != NULL;Entry = Entry->Next) 
+        {   if (Entry->p.v.Val->OutOfScope == true && (char*)((intptr_t)Entry->p.v.Key & ~1) == Ident)
                 return true;
         }
     }
@@ -357,7 +357,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
 
         if (MNEnd - MNPos > 0) *MNPos++ = '/';
         strncpy(MNPos, Ident, MNEnd - MNPos);
-        RegisteredMangledName = TableStrRegister(pc, MangledName);
+        RegisteredMangledName = TableStrRegister(pc, MangledName,strlen(MangledName));
 
         /* is this static already defined? */
         if (!TableGet(&pc->GlobalTable, RegisteredMangledName, &ExistingValue,
@@ -416,45 +416,41 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
         *LVal = &pc->TopStackFrame->ThisValue;
         return;
     }
-
-    /* Check local variables and parameters first */
-    if (pc->TopStackFrame == NULL || 
-        pc->TopStackFrame->LocalTable.Size == 0 ||
-        !TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
-        
-        /* If we're in a member function, check if this is a member of 'this' */
-        if (pc->TopStackFrame != NULL && pc->TopStackFrame->HasThis) {
-            struct Value *ThisVal = &pc->TopStackFrame->ThisValue;
-            struct ValueType *StructType = ThisVal->Typ;
-            
-            /* Dereference if this is a pointer */
-            if (StructType->Base == TypePointer)
-                StructType = StructType->FromType;
-            
-            /* Check if this identifier is a member of the struct */
-            if (StructType->Base == TypeStruct && StructType->Members != NULL &&
-                StructType->Members->Size > 0) {
-                struct Value *MemberValue;
-                if (TableGet(StructType->Members, Ident, &MemberValue, NULL, NULL, NULL)) {
-                    /* Found it as a struct member - create an lvalue pointing to it */
-                    char *DerefDataLoc = (char *)ThisVal->Val->Pointer;
-                    struct Value *Result = VariableAllocValueFromExistingData(Parser,
-                        MemberValue->Typ,
-                        (void*)(DerefDataLoc + MemberValue->Val->Integer),
-                        true, ThisVal);
-                    *LVal = Result;
-                    return;
-                }
-            }
-        }
-        
-        /* Not found in locals or 'this' members - check globals */
-        if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
-            if (VariableDefinedAndOutOfScope(pc, Ident))
-                ProgramFail(Parser, "'%s' is out of scope", Ident);
-            else
-                ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
-        }
+    if(!strchr(Ident,'.'))// Not a member function?
+    {   /* Check local variables and parameters first */
+        if (pc->TopStackFrame == NULL || 
+            pc->TopStackFrame->LocalTable.Size == 0 ||
+            !TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
+            /* If we're in a member function, check if this is a member of 'this' */
+            if (pc->TopStackFrame != NULL && pc->TopStackFrame->HasThis) {
+                struct Value *ThisVal = &pc->TopStackFrame->ThisValue;
+                struct ValueType *StructType = ThisVal->Typ;
+                /* Dereference if this is a pointer */
+                if (StructType->Base == TypePointer)
+                    StructType = StructType->FromType;
+                /* Check if this identifier is a member of the struct */
+                if (StructType->Base == TypeStruct && StructType->Members != NULL &&
+                    StructType->Members->Size > 0) {
+                    struct Value *MemberValue;
+                    if (TableGet(StructType->Members, Ident, &MemberValue, NULL, NULL, NULL)) {
+                        /* Found it as a struct member - create an lvalue pointing to it */
+                        char *DerefDataLoc = (char *)ThisVal->Val->Pointer;
+                        struct Value *Result = VariableAllocValueFromExistingData(Parser,
+                            MemberValue->Typ,
+                            (void*)(DerefDataLoc + MemberValue->Val->Integer),
+                            true, ThisVal);
+                        *LVal = Result;
+                        return;
+    }   }   }   }   }
+    /* Not found in locals or 'this' members - check globals */
+    if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
+#if 1
+        printf("DEBUG: TableGet: Not found in GlobalTable %p: %s\n",&pc->GlobalTable,Ident);
+#endif
+        if (VariableDefinedAndOutOfScope(pc, Ident))
+            ProgramFail(Parser, "'%s' is out of scope", Ident);
+        else
+            ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
     }
 }
 
@@ -466,10 +462,10 @@ void VariableDefinePlatformVar(Picoc *pc, struct ParseState *Parser, char *Ident
         NULL, true);
     SomeValue->Typ = Typ;
     SomeValue->Val = FromValue;
-
+    char* s = TableStrRegister(pc, Ident, strlen(Ident));
     if (!TableSet(pc,
             (pc->TopStackFrame == NULL) ? &pc->GlobalTable : &pc->TopStackFrame->LocalTable,
-            TableStrRegister(pc, Ident), SomeValue,
+            s, SomeValue,
             Parser ? Parser->FileName : NULL,
             Parser ? Parser->Line : 0, Parser ? Parser->CharacterPos : 0))
         ProgramFail(Parser, "'%s' is already defined", Ident);

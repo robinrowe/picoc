@@ -6,18 +6,14 @@
 #include "variable.h"
 #include "heap.h"
 
-static unsigned int TableHash(const char *Key, int Len);
-static struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,
-    int *AddAt);
-static struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
-    const char *Key, int Len, int *AddAt);
+#define MAGIC
 
 /* initialize the shared string system */
 void TableInit(Picoc *pc)
 {
     TableInitTable(&pc->StringTable, &pc->StringHashTable[0],
             STRING_TABLE_SIZE, true);
-    pc->StrEmpty = TableStrRegister(pc, "");
+    pc->StrEmpty = TableStrRegister(pc, "",0);
 }
 
 /* hash function for strings */
@@ -51,15 +47,14 @@ void TableInitTable(struct Table *Tbl, struct TableEntry **HashTable, int Size,
 struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,
     int *AddAt)
 {
-    /* shared strings have unique addresses so we don't need to hash them */
+    /* Shared strings have unique addresses so we don't need to hash them. 
+       The Key parameter is not hashed by its string content - it's hashed by its memory address. */
     uintptr_t HashValue = ((uintptr_t)Key) % Tbl->Size;
     struct TableEntry *Entry;
-
     for (Entry = Tbl->HashTable[HashValue]; Entry != NULL; Entry = Entry->Next) {
         if (Entry->p.v.Key == Key)
             return Entry;   /* found */
     }
-
     *AddAt = HashValue;    /* didn't find it in the chain */
     return NULL;
 }
@@ -93,6 +88,11 @@ int TableSet(Picoc *pc, struct Table *Tbl, char *Key, struct Value *Val,
 int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     const char **DeclFileName, int *DeclLine, int *DeclColumn)
 {
+#ifdef MAGIC
+    if(strstr(Key,"Foo") || strstr(Key,"foo") || strstr(Key,"Global"))
+    {    printf("MAGIC: table=%p %p TableGet: %p \"%s\"\n",Tbl,Tbl->HashTable,&Key, Key);
+    }
+#endif
     int AddAt;
     struct TableEntry *FoundEntry = TableSearch(Tbl, Key, &AddAt);
     if (FoundEntry == NULL)
@@ -134,16 +134,13 @@ struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key)
 /* check a hash table entry for an identifier */
 struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
     const char *Key, int Len, int *AddAt)
-{
-    int HashValue = TableHash(Key, Len) % Tbl->Size;
+{   int HashValue = TableHash(Key, Len) % Tbl->Size;
     struct TableEntry *Entry;
-
     for (Entry = Tbl->HashTable[HashValue]; Entry != NULL; Entry = Entry->Next) {
         if (strncmp(&Entry->p.Key[0], (char*)Key, Len) == 0 &&
                 Entry->p.Key[Len] == '\0')
             return Entry;   /* found */
     }
-
     *AddAt = HashValue;    /* didn't find it in the chain */
     return NULL;
 }
@@ -151,39 +148,38 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
 /* set an identifier and return the identifier. share if possible */
 char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
     int IdentLen)
-{
-    int AddAt;
-    struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,
-        &AddAt);
-
+{   int AddAt;
+    struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,&AddAt);
     if (FoundEntry != NULL)
         return &FoundEntry->p.Key[0];
-    else {
-        /* add it to the table - we economise by not allocating
-            the whole structure here */
-        struct TableEntry *NewEntry = HeapAllocMem(pc,
-            sizeof(struct TableEntry) -
-            sizeof(union TableEntryPayload) + IdentLen + 1);
-        if (NewEntry == NULL)
-            ProgramFailNoParser(pc, "(TableSetIdentifier) out of memory");
-
-        strncpy((char *)&NewEntry->p.Key[0], (char *)Ident, IdentLen);
-        NewEntry->p.Key[IdentLen] = '\0';
-        NewEntry->Next = Tbl->HashTable[AddAt];
-        Tbl->HashTable[AddAt] = NewEntry;
-        return &NewEntry->p.Key[0];
+    /* add it to the table - we economise by not allocating
+        the whole structure here */
+    struct TableEntry *NewEntry = HeapAllocMem(pc,
+        sizeof(struct TableEntry) -
+        sizeof(union TableEntryPayload) + IdentLen + 1);
+    if (NewEntry == NULL)
+        ProgramFailNoParser(pc, "(TableSetIdentifier) out of memory");
+    strncpy((char *)&NewEntry->p.Key[0], (char *)Ident, IdentLen);
+    NewEntry->p.Key[IdentLen] = '\0';
+    NewEntry->Next = Tbl->HashTable[AddAt];
+    Tbl->HashTable[AddAt] = NewEntry;
+#ifdef MAGIC
+    if(strstr(NewEntry->p.Key,"Foo") || strstr(NewEntry->p.Key,"foo") || strstr(NewEntry->p.Key,"Global"))
+    {    printf("MAGIC: table=%p %p TableSetIdentifier: %p \"%s\"\n",Tbl, Tbl->HashTable,&NewEntry->p.Key,NewEntry->p.Key);
     }
+#endif
+    return &NewEntry->p.Key[0];
 }
 
 /* register a string in the shared string store */
-char *TableStrRegister2(Picoc *pc, const char *Str, int Len)
+char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
 {
     return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
 }
 
-char *TableStrRegister(Picoc *pc, const char *Str)
-{
-    return TableStrRegister2(pc, Str, strlen((char *)Str));
+char *TableMemberFunctionRegister(Picoc *pc, const char *Str)
+{    size_t Len = strlen(Str);
+     return TableSetIdentifier(pc, &pc->GlobalTable, Str, Len);
 }
 
 /* free all the strings */

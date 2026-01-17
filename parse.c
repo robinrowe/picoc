@@ -202,25 +202,22 @@ if (TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) {
 }
 
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser, 
-    struct ValueType *StructType, 
-    struct ValueType *ReturnType, 
-    char *MemberName)
-{   printf("DEBUG: ParseMemberFunctionDefinition START for member '%s'\n", MemberName);
+    struct ValueType *StructType, struct ValueType *ReturnType, char *MemberName)
+{
     Picoc *pc = Parser->pc;
     char MangledName[256];
-    
-    /* Create mangled name: StructName_MemberName */
-    /* Example: struct Foo { void hello() } becomes Foo_hello */
-    snprintf(MangledName, sizeof(MangledName), "%s_%s", 
-             StructType->Identifier, MemberName);
-    
+    /* Create mangled name: StructName.MemberName 
+       Example: struct Foo { void hello() } becomes Foo.hello */
+    snprintf(MangledName, sizeof(MangledName), "%s.%s",StructType->Identifier, MemberName);
     /* Register the mangled name in the string table */
-    char *RegisteredName = TableStrRegister(pc, MangledName);
-#ifdef VERBOSE
+    char *RegisteredName = TableMemberFunctionRegister(pc, MangledName);
+#if 1
     printf("DEBUG: Defining member function %s as global %s\n", MemberName, RegisteredName);
+#endif
+#if 1
     struct Value *TestLookup;
- //   VariableGet(pc, Parser, RegisteredName, &TestLookup);// terminates if not found!
- //   printf("DEBUG: SUCCESS - %s is now defined and findable!\n", RegisteredName); 
+    VariableGet(pc, Parser, RegisteredName, &TestLookup);// terminates if not found!
+    printf("DEBUG: SUCCESS - %s is now defined and findable!\n", RegisteredName); 
 #endif
     /* Parse as a regular global function with the mangled name */
     /* The parser is already positioned at the '(' after the function name */
@@ -911,7 +908,7 @@ void PicocParse(Picoc *pc, const char *FileName, const char *Source,
     int SourceLen, int RunIt, int CleanupNow, int CleanupSource,
     int EnableDebugger)
 {
-    char *RegFileName = TableStrRegister(pc, FileName);
+    char *RegFileName = TableStrRegister(pc, FileName,strlen(FileName));
     enum ParseResult Ok;
     struct ParseState Parser;
     struct CleanupTokenNode *NewCleanupNode;

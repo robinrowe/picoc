@@ -8,8 +8,13 @@ struct Foo
     }
 };
 
+void Global()
+{   puts("global");
+}
+
 int main()
 {   puts("Starting main");
+    Global();
     struct Foo foo;
     puts("Created foo variable");
     foo.hello();

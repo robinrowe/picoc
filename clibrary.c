@@ -16,7 +16,7 @@ void LibraryInit(Picoc *pc)
 {
 
     /* define the version number macro */
-    pc->VersionString = TableStrRegister(pc, PROGRAM_VERSION);
+    pc->VersionString = TableStrRegister(pc, PROGRAM_VERSION,strlen(PROGRAM_VERSION));
     VariableDefinePlatformVar(pc, NULL, "PROGRAM_VERSION", pc->CharPtrType,
         (union AnyValue*)&pc->VersionString, false);
 
@@ -39,7 +39,7 @@ void LibraryAdd(Picoc *pc, struct LibraryFunction *FuncList)
     struct ValueType *ReturnType;
     struct Value *NewValue;
     void *Tokens;
-    char *IntrinsicName = TableStrRegister(pc, "c library");
+    char *IntrinsicName = TableStrRegister(pc, "c library",9);
 
     /* read all the library definitions */
     for (Count = 0; FuncList[Count].Prototype != NULL; Count++) {

@@ -64,10 +64,10 @@ void PicocCallMain(Picoc *pc, int argc, char **argv)
     /* check if the program wants arguments */
     struct Value *FuncValue = NULL;
 
-    if (!VariableDefined(pc, TableStrRegister(pc, "main")))
+    if (!VariableDefined(pc, TableStrRegister(pc, "main",4)))
         ProgramFailNoParser(pc, "main() is not defined");
 
-    VariableGet(pc, NULL, TableStrRegister(pc, "main"), &FuncValue);
+    VariableGet(pc, NULL, TableStrRegister(pc, "main",4), &FuncValue);
     if (FuncValue->Typ->Base != TypeFunction)
         ProgramFailNoParser(pc, "main is not a function - can't call it");
 
@@ -265,12 +265,13 @@ char *PlatformMakeTempName(Picoc *pc, char *TempNameBuffer)
     while (CPos > 1) {
         if (TempNameBuffer[CPos] < '9') {
             TempNameBuffer[CPos]++;
-            return TableStrRegister(pc, TempNameBuffer);
+            return TableStrRegister(pc, TempNameBuffer,strlen(TempNameBuffer));
         } else {
             TempNameBuffer[CPos] = '0';
             CPos--;
         }
     }
 
-    return TableStrRegister(pc, TempNameBuffer);
+    return TableStrRegister(pc, TempNameBuffer,strlen(TempNameBuffer));
 }
+

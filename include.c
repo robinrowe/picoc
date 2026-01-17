@@ -46,7 +46,7 @@ void IncludeRegister(Picoc *pc, const char *IncludeName,
     const char *SetupCSource)
 {
     struct IncludeLibrary *NewLib = HeapAllocMem(pc, sizeof(struct IncludeLibrary));
-    NewLib->IncludeName = TableStrRegister(pc, IncludeName);
+    NewLib->IncludeName = TableStrRegister(pc, IncludeName,strlen(IncludeName));
     NewLib->SetupFunction = SetupFunction;
     NewLib->FuncList = FuncList;
     NewLib->SetupCSource = SetupCSource;
