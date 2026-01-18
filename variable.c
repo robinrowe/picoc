@@ -445,7 +445,7 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
     /* Not found in locals or 'this' members - check globals */
     if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
 #if 1
-        printf("DEBUG: TableGet: Not found in GlobalTable %p: %s\n",&pc->GlobalTable,Ident);
+        printf("DEBUG: VariableGet: TableGet: Not found in table %p: %s\n",&pc->GlobalTable,Ident);
 #endif
         if (VariableDefinedAndOutOfScope(pc, Ident))
             ProgramFail(Parser, "'%s' is out of scope", Ident);

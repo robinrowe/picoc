@@ -32,7 +32,7 @@ void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger);
 enum ParseResult ParseStatement(struct ParseState *Parser,
     int CheckTrailingSemicolon);
 struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *Identifier);
+    struct ValueType *ReturnType, char *Identifier,struct ValueType *this_type);
 void ParseCleanup(Picoc *pc);
 void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 void ParserCopy(struct ParseState *To, struct ParseState *From);

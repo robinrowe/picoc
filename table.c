@@ -176,12 +176,12 @@ char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
 {
     return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
 }
-
+#if 1
 char *TableMemberFunctionRegister(Picoc *pc, const char *Str)
 {    size_t Len = strlen(Str);
      return TableSetIdentifier(pc, &pc->GlobalTable, Str, Len);
 }
-
+#endif
 /* free all the strings */
 void TableStrFree(Picoc *pc)
 {

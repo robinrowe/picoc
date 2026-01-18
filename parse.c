@@ -8,6 +8,7 @@
 #include "heap.h"
 
 //#define VERBOSE
+//#define MAGIC
 
 static enum ParseResult ParseStatementMaybeRun(struct ParseState *Parser,
         int Condition, int CheckTrailingSemicolon);
@@ -82,7 +83,7 @@ int ParseCountParams(struct ParseState *Parser)
 
 /* parse a function definition and store it for later */
 struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *Identifier)
+    struct ValueType *ReturnType, char *Identifier, struct ValueType *this_type)
 {
     int ParamCount = 0;
     char *ParamIdentifier;
@@ -93,7 +94,9 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     struct Value *OldFuncValue;
     struct ParseState FuncBody;
     Picoc *pc = Parser->pc;
-
+#ifdef MAGIC
+    printf("MAGIC: ParseFunctionDefinition adding '%s'\n", Identifier);
+#endif
     if (pc->TopStackFrame != NULL)
         ProgramFail(Parser, "nested function definitions are not allowed");
 
@@ -102,7 +105,9 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     ParamCount = ParseCountParams(Parser);
     if (ParamCount > PARAMETER_MAX)
         ProgramFail(Parser, "too many parameters (%d allowed)", PARAMETER_MAX);
-
+    if(this_type)
+    {   ParamCount++;
+    }
     FuncValue = VariableAllocValueAndData(pc, Parser,
         sizeof(struct FuncDef) + sizeof(struct ValueType*)*ParamCount +
         sizeof(const char*)*ParamCount,
@@ -116,8 +121,26 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     FuncValue->Val->FuncDef.ParamName =
         (char**)((char*)FuncValue->Val->FuncDef.ParamType +
             sizeof(struct ValueType*)*ParamCount);
+    ParamCount = 0;
+    /* ADD IMPLICIT 'this' PARAMETER FIRST */
+    if (this_type) {
+        /* Look up the struct type */
+        struct ValueType *StructType = NULL;
+        if (!TypeLookup(pc, this_type, &StructType))
+            ProgramFail(Parser, "struct type '%s' not found", this_type);
+        
+        /* Create a pointer to the struct type */
+        struct ValueType *ThisPtrType = TypeGetMatching(pc, Parser, StructType,
+            TypePointer, 0, NULL, true);
+        
+        /* Add as first parameter */
+        FuncValue->Val->FuncDef.ParamType[0] = ThisPtrType;
+        FuncValue->Val->FuncDef.ParamName[0] = TableStrRegister(pc, "this",4);
+        ParamCount = 1;
+    }
 
-    for (ParamCount = 0; ParamCount < FuncValue->Val->FuncDef.NumParams; ParamCount++) {
+    /* NOW PARSE USER'S PARAMETERS */
+    for (ParamCount; ParamCount < FuncValue->Val->FuncDef.NumParams; ParamCount++) {
         /* harvest the parameters into the function definition */
         if (ParamCount == FuncValue->Val->FuncDef.NumParams-1 &&
                 LexGetToken(&ParamParser, NULL, false) == TokenEllipsis) {
@@ -189,44 +212,31 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     if (!TableSet(pc, &pc->GlobalTable, Identifier, FuncValue,
                 (char*)Parser->FileName, Parser->Line, Parser->CharacterPos))
         ProgramFail(Parser, "'%s' is already defined", Identifier);
-#ifdef VERBOSE
-printf("DEBUG: ParseFunctionDefinition completed for '%s', checking if it was registered...\n", Identifier);
-struct Value *TestValue;
-if (TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) {
-    printf("DEBUG: SUCCESS - '%s' is in GlobalTable!\n", Identifier);
-} else {
-    printf("DEBUG: FAILURE - '%s' is NOT in GlobalTable!\n", Identifier);
-}
+#if 0
+    printf("MAGIC: ParseFunctionDefinition completed for '%s', checking if it was registered...\n", Identifier);
+    struct Value *TestValue;
+    if (!TableGet(&pc->GlobalTable, Identifier, &TestValue, NULL, NULL, NULL)) 
+    {    printf("DEBUG: FAILURE - '%s' is NOT in GlobalTable!\n", Identifier);
+    }
 #endif
     return FuncValue;
 }
 
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser, 
-    struct ValueType *StructType, struct ValueType *ReturnType, char *MemberName)
-{
-    Picoc *pc = Parser->pc;
-    char MangledName[256];
-    /* Create mangled name: StructName.MemberName 
-       Example: struct Foo { void hello() } becomes Foo.hello */
-    snprintf(MangledName, sizeof(MangledName), "%s.%s",StructType->Identifier, MemberName);
-    /* Register the mangled name in the string table */
-    char *RegisteredName = TableMemberFunctionRegister(pc, MangledName);
+    struct ValueType *StructType, struct ValueType *ReturnType, char *function_name)
+{   const char* type_name = StructType->Identifier;
+    char mangle_name[256];
+    /* Create mangled name: Foo.hello */
+    snprintf(mangle_name, sizeof(mangle_name), "%s.%s", type_name, function_name);
+    /* Register the mangled name */
+    char *RegisteredName = TableStrRegister(Parser->pc, mangle_name,strlen(mangle_name));
 #if 1
-    printf("DEBUG: Defining member function %s as global %s\n", MemberName, RegisteredName);
+    printf("DEBUG: TableStrRegister: Defining member function %s as global %s\n", function_name, RegisteredName);
 #endif
-#if 1
-    struct Value *TestLookup;
-    VariableGet(pc, Parser, RegisteredName, &TestLookup);// terminates if not found!
-    printf("DEBUG: SUCCESS - %s is now defined and findable!\n", RegisteredName); 
-#endif
-    /* Parse as a regular global function with the mangled name */
-    /* The parser is already positioned at the '(' after the function name */
-#ifdef VERBOSE
-    printf("DEBUG: ParseMemberFunctionDefinition END for member '%s'\n", MemberName);
-#endif
-    return ParseFunctionDefinition(Parser, ReturnType, RegisteredName);
+    /* Parse it as a regular function with the mangled name */
+    /* This will store it in GlobalTable */
+    return ParseFunctionDefinition(Parser, ReturnType, RegisteredName,StructType);
 }
-
 
 /* parse an array initializer and assign to a variable */
 int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,
@@ -398,7 +408,7 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
             /* handle function definitions */
             if (LexGetToken(Parser, NULL, false) == TokenOpenParen)
             {
-                ParseFunctionDefinition(Parser, Typ, Identifier);
+                ParseFunctionDefinition(Parser, Typ, Identifier,0);
                 return false;
             } else {
                 if (Typ == &pc->VoidType && Identifier != pc->StrEmpty)

@@ -3,21 +3,21 @@
 #include <stdio.h>
 
 struct Foo 
-{   void hello()
+{   void helloMethod()
     {   puts("hello");
     }
 };
 
-void Global()
+void helloFunction()
 {   puts("global");
 }
 
 int main()
-{   puts("Starting main");
-    Global();
+{   puts("main: Starting, calling global function");
+    helloFunction();
+    puts("main: Creating foo struct");
     struct Foo foo;
-    puts("Created foo variable");
-    foo.hello();
-    puts("Called foo.hello()");
+    puts("main: Calling foo.helloMethod()");
+    foo.helloMethod();
     return 0;
 }

@@ -126,7 +126,9 @@ void DebugStep(void)
 }
 #endif /* DEBUGGER */
 
-#define SHOW(token) case token: printf("token = %s (%d)",#token,token); return
+#ifdef PRINT_TOKEN
+
+#define SHOW(token) case token: printf("DEBUG: token = %s (%d)\n",#token,token); return
 
 void PrintLexToken(enum LexToken token)
 {	switch(token)
@@ -228,3 +230,7 @@ void PrintLexToken(enum LexToken token)
 		SHOW(TokenEndOfFunction);
 		SHOW(TokenBackSlash);
 }	}
+#else
+void PrintLexToken(enum LexToken token)
+{}
+#endif
