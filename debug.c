@@ -1,6 +1,9 @@
 /* picoc interactive debugger */
 #include "interpreter.h"
 
+#define SHOWX
+//#define PRINT_TOKEN
+
 #define BREAKPOINT_HASH(p) (((unsigned long)(p)->FileName) ^ (((p)->Line << 16) | ((p)->CharacterPos << 16)))
 
 #ifdef DEBUGGER
@@ -125,6 +128,33 @@ void DebugStep(void)
 {
 }
 #endif /* DEBUGGER */
+
+#ifdef SHOWX
+
+void ShowX(const char* function,const char* table,const char* word,size_t length)
+{	if(!length)
+	{	length = strlen(word);
+	}
+#if 0
+	if(length < 11)
+	{	return;
+	}
+	if(memcmp(word,"fooFunction",11))
+	{	return;
+	}
+	if(length < 13)
+	{	return;
+	}
+	if(memcmp(word,"Foo.fooMethod",13))
+	{	return;
+	}
+#endif
+	printf("SHOWX: %s(%s): '%.*s'\n",function,table,(int) length, word);
+}
+#else
+void ShowX(const char* function,const char* table,const char* word)
+{}
+#endif 
 
 #ifdef PRINT_TOKEN
 

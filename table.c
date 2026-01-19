@@ -7,6 +7,7 @@
 #include "heap.h"
 
 #define MAGIC
+#define VERBOSE
 
 /* initialize the shared string system */
 void TableInit(Picoc *pc)
@@ -85,10 +86,11 @@ int TableSet(Picoc *pc, struct Table *Tbl, char *Key, struct Value *Val,
 
 /* find a value in a table. returns FALSE if not found.
  * Key must be a shared string from TableStrRegister() */
+ #if 1
 int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     const char **DeclFileName, int *DeclLine, int *DeclColumn)
 {
-#ifdef MAGIC
+#ifdef MAGIC2
     if(strstr(Key,"Foo") || strstr(Key,"foo") || strstr(Key,"Global"))
     {    printf("MAGIC: table=%p %p TableGet: %p \"%s\"\n",Tbl,Tbl->HashTable,&Key, Key);
     }
@@ -96,19 +98,40 @@ int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     int AddAt;
     struct TableEntry *FoundEntry = TableSearch(Tbl, Key, &AddAt);
     if (FoundEntry == NULL)
+    {   ShowX("TableGet","NOT found",Key,0);
         return false;
-
+    }
     *Val = FoundEntry->p.v.Val;
-
     if (DeclFileName != NULL) {
         *DeclFileName = FoundEntry->DeclFileName;
         *DeclLine = FoundEntry->DeclLine;
         *DeclColumn = FoundEntry->DeclColumn;
     }
-
+    ShowX("TableGet","found",Key,0);
     return true;
 }
-
+#else
+int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
+    const char **DeclFileName, int *DeclLine, int *DeclColumn)
+{
+    int AddAt;
+    struct TableEntry *FoundEntry;
+    
+    /* Use content-based search for identifier lookups */
+    FoundEntry = TableSearchIdentifier(Tbl, Key, strlen(Key), &AddAt);
+    
+    if (FoundEntry == NULL)
+        return false;
+        
+    *Val = FoundEntry->p.v.Val;
+    if (DeclFileName != NULL) {
+        *DeclFileName = FoundEntry->DeclFileName;
+        *DeclLine = FoundEntry->DeclLine;
+        *DeclColumn = FoundEntry->DeclColumn;
+    }
+    return true;
+}
+#endif
 /* remove an entry from the table */
 struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key)
 {
@@ -136,12 +159,24 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
     const char *Key, int Len, int *AddAt)
 {   int HashValue = TableHash(Key, Len) % Tbl->Size;
     struct TableEntry *Entry;
-    for (Entry = Tbl->HashTable[HashValue]; Entry != NULL; Entry = Entry->Next) {
-        if (strncmp(&Entry->p.Key[0], (char*)Key, Len) == 0 &&
-                Entry->p.Key[Len] == '\0')
-            return Entry;   /* found */
+    ShowX("TableSearchIdentifier","looking",Key,Len);
+#ifdef MAGIC2
+    if (strstr(Key, "Foo.fooMethod")) {
+        printf("MAGIC: TableSearchIdentifier for '%.*s' len=%d hash=%d\n", 
+               Len, Key, Len, HashValue);
     }
+#endif
+#ifdef VERBOSE2
+     printf("MAGIC: TableSearchIdentifier: searching for \"%.*s\" (len=%d, hash=%d)\n", 
+           Len, Key, Len, HashValue);
+#endif
+    for (Entry = Tbl->HashTable[HashValue]; Entry != NULL; Entry = Entry->Next) 
+    {   if (strncmp(&Entry->p.Key[0], (char*)Key, Len) == 0 && Entry->p.Key[Len] == '\0')
+        {   ShowX("TableEntry","found",Key,Len);   
+            return Entry;   /* found */
+    }   }
     *AddAt = HashValue;    /* didn't find it in the chain */
+    ShowX("TableEntry","NOT found",Key,Len);
     return NULL;
 }
 
@@ -151,7 +186,9 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
 {   int AddAt;
     struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,&AddAt);
     if (FoundEntry != NULL)
+    {   ShowX("TableSetIdentifier","found",Ident,IdentLen);
         return &FoundEntry->p.Key[0];
+    }
     /* add it to the table - we economise by not allocating
         the whole structure here */
     struct TableEntry *NewEntry = HeapAllocMem(pc,
@@ -163,25 +200,38 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
     NewEntry->p.Key[IdentLen] = '\0';
     NewEntry->Next = Tbl->HashTable[AddAt];
     Tbl->HashTable[AddAt] = NewEntry;
-#ifdef MAGIC
-    if(strstr(NewEntry->p.Key,"Foo") || strstr(NewEntry->p.Key,"foo") || strstr(NewEntry->p.Key,"Global"))
-    {    printf("MAGIC: table=%p %p TableSetIdentifier: %p \"%s\"\n",Tbl, Tbl->HashTable,&NewEntry->p.Key,NewEntry->p.Key);
+#ifdef MAGIC2
+    if(strstr(NewEntry->p.Key,"Foo") || strstr(NewEntry->p.Key,"foo"))
+    {    printf("MAGIC: TableSetIdentifier: NewEntry table=%p %p TableSetIdentifier: %p \"%s\"\n",Tbl, Tbl->HashTable,&NewEntry->p.Key,NewEntry->p.Key);
     }
 #endif
+    ShowX("TableSetIdentifier","added",Ident,IdentLen);
     return &NewEntry->p.Key[0];
 }
 
 /* register a string in the shared string store */
 char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
-{
+{ 
+#ifdef MAGIC
+    if(!memcmp(Str,"Foo.fooMethod",13) || !memcmp(Str,"fooFunction",11))
+    {   printf("DEBUG: TableStrRegister in StringTable: %.*s\n", (int) Len, Str);
+    }
+#endif
+    ShowX("TableStrRegister","StringTable",Str,Len);
     return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
 }
-#if 1
+
 char *TableMemberFunctionRegister(Picoc *pc, const char *Str)
 {    size_t Len = strlen(Str);
-     return TableSetIdentifier(pc, &pc->GlobalTable, Str, Len);
-}
+    assert(0);
+#ifdef MAGIC
+    if(!memcmp(Str,"Foo.fooMethod",13) || !memcmp(Str,"fooFunction",11))
+    {    printf("DEBUG: TableMemberFunctionRegister in GlobalTable: %.*s\n", (int) Len, Str);
+    }
 #endif
+    return TableSetIdentifier(pc, &pc->GlobalTable, Str, Len);
+}
+
 /* free all the strings */
 void TableStrFree(Picoc *pc)
 {

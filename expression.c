@@ -1316,7 +1316,7 @@ void ExpressionGetStructElement(struct ParseState *Parser,
                 "can't use '%s' on something that's not a struct or union %s : it's a %t",
                 (Token == TokenDot) ? "." : "->",
                 (Token == TokenArrow) ? "pointer" : "", ParamVal->Typ);
-
+        ShowX("TableGet", "Members", Ident->Val->Identifier, 0);
         if (!TableGet(StructType->Members, Ident->Val->Identifier,
                 &MemberValue, NULL, NULL, NULL))
             ProgramFail(Parser, "doesn't have a member called '%s'",
@@ -1377,9 +1377,7 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
  * Sets *StructType to the found type if successful
  */
 int TypeLookup(Picoc *pc, const char *TypeName, struct ValueType **StructType)
-{
-    struct ValueType *SearchType;
-#if 1
+{   struct ValueType *SearchType;
     /* Search through the UberType's derived type list for matching struct types */
     for (SearchType = pc->UberType.DerivedTypeList; SearchType != NULL; SearchType = SearchType->Next) {
         /* Check if it's a struct type with matching name */
@@ -1388,27 +1386,16 @@ int TypeLookup(Picoc *pc, const char *TypeName, struct ValueType **StructType)
 #endif
         if (SearchType->Base == TypeStruct && 
             SearchType->Identifier != NULL &&
-            SearchType->Identifier == TypeName) {  /* Use pointer comparison since identifiers are interned */
+            /* Use pointer comparison since identifiers are interned */
+            SearchType->Identifier == TypeName) {  
             *StructType = SearchType;
             return 2;
         }
     }
-#else
-    /* Search through the UberType for matching struct types */
-    for (SearchType = pc->UberType.Next; SearchType != NULL; SearchType = SearchType->Next) {
-        /* Check if it's a struct type with matching name */
-        if (SearchType->Base == TypeStruct && 
-            SearchType->Identifier != NULL &&
-            strcmp(SearchType->Identifier, TypeName) == 0) {
-            *StructType = SearchType;
-            return 1;
-        }
-    }
-#endif
     return 0;  /* Type not found */
 }
 
-char* StrdupMangleName(struct ParseState *Parser,  struct ExpressionStack **StackTop,const char *struct_name)
+char* GetMangleName(struct ParseState *Parser,  struct ExpressionStack **StackTop,const char *struct_name)
 {   struct Value *MemberIdent = NULL;
     struct ParseState PeekState;
     ParserCopy(&PeekState, Parser);
@@ -1428,56 +1415,44 @@ char* StrdupMangleName(struct ParseState *Parser,  struct ExpressionStack **Stac
     if(token != TokenOpenParen)
     {   return 0;
     }
-    struct Value *VarValue = NULL;
-    /* Look up the variable to get its type */
-#ifdef MAGIC
-    printf("MAGIC: StrdupMangleName trying to look up '%s'\n", struct_name);
-    printf("MAGIC: Parser=%p, Parser->pc=%p, TopStackFrame=%p\n", 
-           (void*)Parser, (void*)Parser->pc, (void*)Parser->pc->TopStackFrame);
-    printf("MAGIC: StrdupMangleName - Mode=%d (RunModeRun=%d)\n", 
-       Parser->Mode, RunModeRun);
-#endif
-    const char* type_name = 0;
-    char* function_name = 0;
-    if (Parser->Mode == RunModeRun) 
-    {   /* During run mode, look up the variable */
-        VariableGet(Parser->pc, Parser, struct_name, &VarValue); 
-        /* Make sure it's a struct type */
-        if (VarValue->Typ->Base != TypeStruct)
-        {   return 0;  // Not a struct, can't have member functions
-        }
-        struct Value *VarValue = NULL;
-        VariableGet(Parser->pc, Parser, struct_name, &VarValue);
-        if (VarValue->Typ->Base != TypeStruct)
-            return NULL;
-        type_name = VarValue->Typ->Identifier;  // This is "Foo"
-        function_name = MemberIdent->Val->Identifier; // This is "hello"
-        /* Consume the . and function name tokens from real parser */
+    /* We have member function pattern: var.method() */
+    /* ONLY MANGLE DURING RUN MODE */
+    if (Parser->Mode != RunModeRun) {
+        /* During parse mode, consume tokens but don't mangle */
         LexGetToken(Parser, NULL, true);   /* consume . */
         LexGetToken(Parser, NULL, true);   /* consume member name */
-    } 
-    else 
-    {   /* During parse mode, we need to get the type a different way */
-        struct ValueType *StructType = NULL;
-        // Search for "struct Foo" type definition which DOES exist during parse
-        if(!TypeLookup(Parser->pc, struct_name, &StructType))
-        {   return 0;
-        }
+        return NULL;
     }
-    size_t len = strlen(type_name)+strlen(function_name)+2;// %s.%s\0 Foo.hello, not foo.hello
-    char* mangle_name = (char*) malloc(len);
-    snprintf(mangle_name, len, "%s.%s", type_name, function_name); // Foo.hello 
+    /* During run mode, look up the variable to get its type */
+    struct Value *VarValue = NULL;
+    VariableGet(Parser->pc, Parser, struct_name, &VarValue);
+    if (VarValue->Typ->Base != TypeStruct)
+        return NULL;
+    const char *type_name = VarValue->Typ->Identifier;  // "Foo"
+    const char *function_name = MemberIdent->Val->Identifier;  // "helloMethod"
+    char buffer[255];
+    snprintf(buffer, sizeof(buffer), "%s.%s", type_name, function_name);
+    /* Intern the mangled name to get the same pointer used at definition */
+#if 1
+    char *mangle_name = TableStrRegister(Parser->pc, buffer,strlen(buffer));
+#else
+    char *mangle_name = TableMemberFunctionRegister(Parser->pc, buffer);
+#endif
+    /* Consume .hello tokens */
+    LexGetToken(Parser, NULL, true);
+    LexGetToken(Parser, NULL, true);
 #ifdef MAGIC
-    printf("MAGIC: mangle_name = %s\n",mangle_name);
+    printf("MAGIC: Interned mangle_name = %s\n",mangle_name);
 #endif
     return mangle_name;
 }
+
 
 void ParseTokenIdentifier(struct ParseState *Parser,struct ExpressionStack **StackTop,struct Value *LexValue,
     int* PrefixState,int* Precedence,int* IgnorePrecedence)
 {   /* it's a variable, function, member function or a macro */
     const char *TokenName = LexValue->Val->Identifier;
-#ifdef VERBOSE
+#ifdef VERBOSE2
     printf("DEBUG: TokenIdentifier: '%s'\n", TokenName);
 #endif
 #ifdef MAGIC
@@ -1487,15 +1462,23 @@ void ParseTokenIdentifier(struct ParseState *Parser,struct ExpressionStack **Sta
 #endif
     if (!*PrefixState)
         ProgramFail(Parser, "identifier not expected here");
-    char* mangle_name =  StrdupMangleName(Parser, StackTop, TokenName);
+    char* mangle_name =  GetMangleName(Parser, StackTop, TokenName);
 //  BUG: need to free mangle_name later, is on the heap
     if(mangle_name)
-    {   TokenName = mangle_name;
+    {   /* It's a member function call */
+#ifdef MAGIC
+        puts("MAGIC: push the struct instance onto the stack for 'this' parameter");
+#endif
+        struct Value *StructValue = NULL;
+        VariableGet(Parser->pc, Parser, TokenName, &StructValue);
+        ExpressionStackPushLValue(Parser, StackTop, StructValue, 0);
+        /* Now the mangled name already points past the '.method' */
+        TokenName = mangle_name;
     }
     enum LexToken token = LexGetToken(Parser, NULL, false);
     if (token == TokenOpenParen) 
     {    /* It's a function call */
-#ifdef VERBOSE
+#ifdef VERBOSE2
         printf("DEBUG: It's a regular function call: %s\n", TokenName);
 #endif
         ExpressionParseFunctionCall(Parser, StackTop,
@@ -1505,7 +1488,7 @@ void ParseTokenIdentifier(struct ParseState *Parser,struct ExpressionStack **Sta
         } 
         else 
         {   /* It's a variable reference */
-#ifdef VERBOSE
+#ifdef VERBOSE2
         fprintf(stderr, "DEBUG: It's a variable: %s\n", TokenName);
         fflush(stderr);
 #endif
@@ -1922,8 +1905,8 @@ void ExpressionParseFunctionCall(struct ParseState *Parser,
     struct ExpressionStack **StackTop, const char *FuncName, int RunIt)
 {
             
-#ifdef VERBOSE
-    printf("DEBUG: ExpressionParseFunctionCall: %s\n", FuncName);
+#ifdef VERBOSE2
+    printf("DEBUG: ExpressionParseFunctionCall: '%s'\n", FuncName);
 #endif
     int ArgCount;
     enum LexToken Token = LexGetToken(Parser, NULL, true);    /* open bracket */
@@ -1967,6 +1950,7 @@ if (strcmp(LookupName, "Foo_hello") == 0) {
 #if 0
         VariableGet(Parser->pc, Parser, LookupName, &FuncValue);
 #else
+        ShowX("TableGet","GlobalTable",LookupName,0);
         /* Functions are always in GlobalTable - search there directly */
         if (!TableGet(&Parser->pc->GlobalTable, LookupName, &FuncValue, NULL, NULL, NULL))
             ProgramFail(Parser, "identifier '%s' is undefined", LookupName);

@@ -504,5 +504,6 @@ struct Picoc {
 };
 
 void PrintLexToken(enum LexToken token);
+void ShowX(const char* function,const char* table,const char* word,size_t length);
 
 #endif /* INTERPRETER_H */

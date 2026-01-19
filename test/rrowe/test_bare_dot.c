@@ -8,14 +8,14 @@ struct Foo
         .x = newX;  // dot accesses member of 'this'
     }
     
-    void SetY(int newY)
+    void SetY(int y)
     {
-        .y = newY;
+        .y = y;
     }
     
     int GetSum()
     {
-        return .x + .y;
+        return .x + y;
     }
 };
 

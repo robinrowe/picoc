@@ -277,7 +277,10 @@ int VariableDefinedAndOutOfScope(Picoc *pc, const char* Ident)
     {   HashTable =  &(pc->TopStackFrame)->LocalTable;
     }
     for (Count = 0; Count < HashTable->Size; Count++) 
-    {   printf("DEBUG: VariableDefinedAndOutOfScope: %d %s\n",Count,HashTable->HashTable[Count]->p.v.Key);
+    {   
+#ifdef MAGIC    
+        printf("MAGIC: VariableDefinedAndOutOfScope: %d %s\n",Count,HashTable->HashTable[Count] == NULL ? "<null>":HashTable->HashTable[Count]->p.v.Key);
+#endif
         for (Entry = HashTable->HashTable[Count]; Entry != NULL;Entry = Entry->Next) 
         {   if (Entry->p.v.Val->OutOfScope == true && (char*)((intptr_t)Entry->p.v.Key & ~1) == Ident)
                 return true;
@@ -360,6 +363,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
         RegisteredMangledName = TableStrRegister(pc, MangledName,strlen(MangledName));
 
         /* is this static already defined? */
+        ShowX("TableGet","GlobalTable",RegisteredMangledName,0);
         if (!TableGet(&pc->GlobalTable, RegisteredMangledName, &ExistingValue,
                 &DeclFileName, &DeclLine, &DeclColumn)) {
             /* define the mangled-named static variable store in the global scope */
@@ -377,6 +381,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
             ExistingValue->Val, true);
         return ExistingValue;
     } else {
+        ShowX("TableGet","TopStackFrame",Ident,0);
         if (Parser->Line != 0 && TableGet((pc->TopStackFrame == NULL) ?
                     &pc->GlobalTable : &pc->TopStackFrame->LocalTable, Ident,
                     &ExistingValue, &DeclFileName, &DeclLine, &DeclColumn)
@@ -392,16 +397,17 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
 int VariableDefined(Picoc *pc, const char *Ident)
 {
     struct Value *FoundValue;
-
+    ShowX("TableGet","LocalTable",Ident,0);
     if (pc->TopStackFrame == NULL || !TableGet(&pc->TopStackFrame->LocalTable,
-            Ident, &FoundValue, NULL, NULL, NULL)) {
+            Ident, &FoundValue, NULL, NULL, NULL)) 
+    {   ShowX("TableGet","GlobalTable",Ident,0);
         if (!TableGet(&pc->GlobalTable, Ident, &FoundValue, NULL, NULL, NULL))
             return false;
-    }
-
+    }   
     return true;
 }
 
+#if 0
 /* get the value of a variable. must be defined. Ident must be registered */
 void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
     struct Value **LVal)
@@ -453,7 +459,65 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
             ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
     }
 }
-
+#else
+void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident, struct Value **LVal)
+{
+    /* First check if we have a special 'this' keyword */
+    if (strcmp(Ident, "this") == 0 && pc->TopStackFrame != NULL && 
+        pc->TopStackFrame->HasThis) {
+        *LVal = &pc->TopStackFrame->ThisValue;
+        return;
+    }
+    
+    if (!strchr(Ident, '.')) {  /* Not a member function? */
+        /* Check local variables and parameters first */
+        ShowX("TableGet","LocalTable",Ident,0);
+        if (pc->TopStackFrame != NULL && 
+            pc->TopStackFrame->LocalTable.Size > 0 &&
+            TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
+            /* FOUND IN LOCAL TABLE - RETURN IMMEDIATELY */
+            return;
+        }
+        
+        /* If we're in a member function, check if this is a member of 'this' */
+        if (pc->TopStackFrame != NULL && pc->TopStackFrame->HasThis) {
+            struct Value *ThisVal = &pc->TopStackFrame->ThisValue;
+            struct ValueType *StructType = ThisVal->Typ;
+            
+            /* Dereference if this is a pointer */
+            if (StructType->Base == TypePointer)
+                StructType = StructType->FromType;
+            
+            /* Check if this identifier is a member of the struct */
+            if (StructType->Base == TypeStruct && StructType->Members != NULL &&
+                StructType->Members->Size > 0) {
+                struct Value *MemberValue;
+                ShowX("TableGet","Members",Ident,0);
+                if (TableGet(StructType->Members, Ident, &MemberValue, NULL, NULL, NULL)) {
+                    /* Found it as a struct member */
+                    char *DerefDataLoc = (char *)ThisVal->Val->Pointer;
+                    struct Value *Result = VariableAllocValueFromExistingData(Parser,
+                        MemberValue->Typ,
+                        (void*)(DerefDataLoc + MemberValue->Val->Integer),
+                        true, ThisVal);
+                    *LVal = Result;
+                    return;
+                }
+            }
+        }
+    }
+    
+    /* Not found in locals or 'this' members - check globals */
+    ShowX("TableGet","GlobalTable",Ident,0);
+    if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
+        printf("DEBUG: VariableGet: TableGet: Not found in table %p: %s\n", &pc->GlobalTable, Ident);
+        if (VariableDefinedAndOutOfScope(pc, Ident))
+            ProgramFail(Parser, "'%s' is out of scope", Ident);
+        else
+            ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
+    }
+}
+#endif
 /* define a global variable shared with a platform global. Ident will be registered */
 void VariableDefinePlatformVar(Picoc *pc, struct ParseState *Parser, char *Ident,
     struct ValueType *Typ, union AnyValue *FromValue, int IsWritable)
@@ -537,7 +601,7 @@ void VariableStackFramePop(struct ParseState *Parser)
 struct Value *VariableStringLiteralGet(Picoc *pc, char *Ident)
 {
     struct Value *LVal = NULL;
-
+    ShowX("TableGet","StringLiteralTable",Ident,0);
     if (TableGet(&pc->StringLiteralTable, Ident, &LVal, NULL, NULL, NULL))
         return LVal;
     else

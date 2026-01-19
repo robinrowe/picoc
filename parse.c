@@ -124,11 +124,14 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     ParamCount = 0;
     /* ADD IMPLICIT 'this' PARAMETER FIRST */
     if (this_type) {
+#if 0
         /* Look up the struct type */
         struct ValueType *StructType = NULL;
         if (!TypeLookup(pc, this_type, &StructType))
             ProgramFail(Parser, "struct type '%s' not found", this_type);
-        
+#else
+        struct ValueType *StructType = this_type;
+#endif
         /* Create a pointer to the struct type */
         struct ValueType *ThisPtrType = TypeGetMatching(pc, Parser, StructType,
             TypePointer, 0, NULL, true);
@@ -167,7 +170,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     }
 
     if (FuncValue->Val->FuncDef.NumParams != 0 && Token != TokenCloseParen &&
-            Token != TokenComma && Token != TokenEllipsis)
+            Token != TokenComma && Token != TokenEllipsis && !this_type)
         ProgramFail(&ParamParser, "bad parameter");
 
     if (strcmp(Identifier, "main") == 0) {
@@ -196,10 +199,11 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
         if (ParseStatementMaybeRun(Parser, false, true) != ParseResultOk)
             ProgramFail(Parser, "function definition expected");
 
-        FuncValue->Val->FuncDef.Body = FuncBody;
+        FuncValue->Val->FuncDef.Body = FuncBody; // Function body is stored here
         FuncValue->Val->FuncDef.Body.Pos = LexCopyTokens(&FuncBody, Parser);
 
         /* is this function already in the global table? */
+        ShowX("TableGet","GlobalTable",Identifier,0);
         if (TableGet(&pc->GlobalTable, Identifier, &OldFuncValue, NULL, NULL, NULL)) {
             if (OldFuncValue->Val->FuncDef.Body.Pos == NULL) {
                 /* override an old function prototype */
@@ -225,15 +229,19 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser, 
     struct ValueType *StructType, struct ValueType *ReturnType, char *function_name)
 {   const char* type_name = StructType->Identifier;
-    char mangle_name[256];
+    char buffer[256];
+    char* mangle_name = buffer;
     /* Create mangled name: Foo.hello */
-    snprintf(mangle_name, sizeof(mangle_name), "%s.%s", type_name, function_name);
+    snprintf(mangle_name, sizeof(buffer), "%s.%s", type_name, function_name);
     /* Register the mangled name */
-    char *RegisteredName = TableStrRegister(Parser->pc, mangle_name,strlen(mangle_name));
 #if 1
-    printf("DEBUG: TableStrRegister: Defining member function %s as global %s\n", function_name, RegisteredName);
+    char *RegisteredName = TableStrRegister(Parser->pc, mangle_name,strlen(mangle_name));
+#else
+    char *RegisteredName = TableMemberFunctionRegister(Parser->pc, mangle_name);
 #endif
-    /* Parse it as a regular function with the mangled name */
+#ifdef MAGIC
+    printf("MAGIC: TableStrRegister: Defining member function %s as global %s\n", function_name, RegisteredName);
+#endif
     /* This will store it in GlobalTable */
     return ParseFunctionDefinition(Parser, ReturnType, RegisteredName,StructType);
 }
