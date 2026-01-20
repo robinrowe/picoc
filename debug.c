@@ -132,24 +132,27 @@ void DebugStep(void)
 #ifdef SHOWX
 
 void ShowX(const char* function,const char* table,const char* word,size_t length)
-{	if(!length)
+{	char buffer[100];
+	if(length>99)
+	{	return;
+	}
+	if(length)
+	{	memcpy(buffer,word,length);
+		buffer[length] = 0;
+		word = buffer;
+	}
+	else
 	{	length = strlen(word);
 	}
-#if 0
-	if(length < 11)
-	{	return;
-	}
-	if(memcmp(word,"fooFunction",11))
-	{	return;
-	}
-	if(length < 13)
-	{	return;
-	}
-	if(memcmp(word,"Foo.fooMethod",13))
+#if 1
+	int ignore = strcmp(word,"Foo.fooMethod");
+	//ignore &= strcmp(word,"fooFunction");
+	if(ignore)
 	{	return;
 	}
 #endif
-	printf("SHOWX: %s(%s): '%.*s'\n",function,table,(int) length, word);
+//	printf("SHOWX: %s(%s): '%.*s'\n",function,table,(int) length, word);
+	printf("SHOWX: %s(%s): '%s'\n",function,table,word);
 }
 #else
 void ShowX(const char* function,const char* table,const char* word)

@@ -326,9 +326,9 @@ struct StackFrame {
     struct Table LocalTable;                /* the local variables and parameters */
     struct TableEntry *LocalHashTable[LOCAL_TABLE_SIZE];
     struct StackFrame *PreviousStackFrame;  /* the next lower stack frame */
-    struct Value ThisValue;                 /* 'this' pointer Value for member functions */
-    union AnyValue ThisData;                /* data storage for 'this' pointer */
-    int HasThis;                            /* true if this is a member function call */
+//    struct Value ThisValue;                 /* 'this' pointer Value for member functions */
+//    union AnyValue ThisData;                /* data storage for 'this' pointer */
+//    int HasThis;                            /* true if this is a member function call */
 };
 
 /* lexer state */
@@ -505,5 +505,9 @@ struct Picoc {
 
 void PrintLexToken(enum LexToken token);
 void ShowX(const char* function,const char* table,const char* word,size_t length);
+inline
+int IsMemberFunction(const char* s)
+{   return strchr(s,'.') != 0;
+}
 
 #endif /* INTERPRETER_H */

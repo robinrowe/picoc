@@ -408,6 +408,7 @@ int VariableDefined(Picoc *pc, const char *Ident)
 }
 
 #if 0
+NOT THIS:
 /* get the value of a variable. must be defined. Ident must be registered */
 void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
     struct Value **LVal)
@@ -459,17 +460,20 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
             ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
     }
 }
-#else
+#endif
+
+#if 0
 void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident, struct Value **LVal)
 {
+#if 0
     /* First check if we have a special 'this' keyword */
     if (strcmp(Ident, "this") == 0 && pc->TopStackFrame != NULL && 
         pc->TopStackFrame->HasThis) {
         *LVal = &pc->TopStackFrame->ThisValue;
         return;
     }
-    
-    if (!strchr(Ident, '.')) {  /* Not a member function? */
+#endif    
+    if (!IsMemberFunction(Ident)) {  // Member functions are in GlobalTable
         /* Check local variables and parameters first */
         ShowX("TableGet","LocalTable",Ident,0);
         if (pc->TopStackFrame != NULL && 
@@ -515,6 +519,25 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident, struct
             ProgramFail(Parser, "'%s' is out of scope", Ident);
         else
             ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
+    }
+}
+#endif
+
+#if 1
+// ORIGINAL:
+
+/* get the value of a variable. must be defined. Ident must be registered */
+void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
+    struct Value **LVal)
+{
+    if (pc->TopStackFrame == NULL || !TableGet(&pc->TopStackFrame->LocalTable,
+            Ident, LVal, NULL, NULL, NULL)) {
+        if (!TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
+            if (VariableDefinedAndOutOfScope(pc, Ident))
+                ProgramFail(Parser, "'%s' is out of scope", Ident);
+            else
+                ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);
+        }
     }
 }
 #endif
@@ -581,7 +604,7 @@ void VariableStackFrameAdd(struct ParseState *Parser, const char *FuncName,
     TableInitTable(&NewFrame->LocalTable, &NewFrame->LocalHashTable[0],
         LOCAL_TABLE_SIZE, false);
     NewFrame->PreviousStackFrame = Parser->pc->TopStackFrame;
-    NewFrame->HasThis = false;  /* Initialize to false, will be set for member functions */
+//    NewFrame->HasThis = false;  /* Initialize to false, will be set for member functions */
     Parser->pc->TopStackFrame = NewFrame;
 }
 
