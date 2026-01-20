@@ -98,7 +98,7 @@ int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
     int AddAt;
     struct TableEntry *FoundEntry = TableSearch(Tbl, Key, &AddAt);
     if (FoundEntry == NULL)
-    {   ShowX("TableGet","NOT found",Key,0);
+    {   ShowX("<TableSearch","NOT found",Key,0);
         return false;
     }
     *Val = FoundEntry->p.v.Val;
@@ -107,7 +107,7 @@ int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
         *DeclLine = FoundEntry->DeclLine;
         *DeclColumn = FoundEntry->DeclColumn;
     }
-    ShowX("TableGet","found",Key,0);
+    ShowX("<TableGet","found",Key,0);
     return true;
 }
 #else
@@ -159,7 +159,7 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
     const char *Key, int Len, int *AddAt)
 {   int HashValue = TableHash(Key, Len) % Tbl->Size;
     struct TableEntry *Entry;
-    ShowX("TableSearchIdentifier","looking",Key,Len);
+//    ShowX("TableSearchIdentifier","looking",Key,Len);
 #ifdef MAGIC2
     if (strstr(Key, "Foo.fooMethod")) {
         printf("MAGIC: TableSearchIdentifier for '%.*s' len=%d hash=%d\n", 
@@ -172,11 +172,11 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
 #endif
     for (Entry = Tbl->HashTable[HashValue]; Entry != NULL; Entry = Entry->Next) 
     {   if (strncmp(&Entry->p.Key[0], (char*)Key, Len) == 0 && Entry->p.Key[Len] == '\0')
-        {   ShowX("TableEntry","found",Key,Len);   
+        {   ShowX("<TableEntry","found",Key,Len);   
             return Entry;   /* found */
     }   }
     *AddAt = HashValue;    /* didn't find it in the chain */
-    ShowX("TableEntry","NOT found",Key,Len);
+    ShowX("<TableEntry","NOT found",Key,Len);
     return NULL;
 }
 
@@ -186,7 +186,7 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
 {   int AddAt;
     struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,&AddAt);
     if (FoundEntry != NULL)
-    {   ShowX("TableSetIdentifier","found",Ident,IdentLen);
+    {   ShowX("<TableSetIdentifier","found",Ident,IdentLen);
         return &FoundEntry->p.Key[0];
     }
     /* add it to the table - we economise by not allocating
@@ -205,19 +205,19 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
     {    printf("MAGIC: TableSetIdentifier: NewEntry table=%p %p TableSetIdentifier: %p \"%s\"\n",Tbl, Tbl->HashTable,&NewEntry->p.Key,NewEntry->p.Key);
     }
 #endif
-    ShowX("TableSetIdentifier","added",Ident,IdentLen);
+    ShowX("<Added: TableSetIdentifier","NewEntry",Ident,IdentLen);
     return &NewEntry->p.Key[0];
 }
 
 /* register a string in the shared string store */
 char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
 { 
-#ifdef MAGIC
+#ifdef MAGIC2
     if(!memcmp(Str,"Foo.fooMethod",13) || !memcmp(Str,"fooFunction",11))
     {   printf("DEBUG: TableStrRegister in StringTable: %.*s\n", (int) Len, Str);
     }
 #endif
-    ShowX("TableStrRegister","StringTable",Str,Len);
+    ShowX(">Search: TableStrRegister","StringTable",Str,Len);
     return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
 }
 

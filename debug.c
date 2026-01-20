@@ -146,13 +146,15 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 	}
 #if 1
 	int ignore = strcmp(word,"Foo.fooMethod");
-	//ignore &= strcmp(word,"fooFunction");
+	ignore &= strcmp(word,"foo");
+	ignore &= strcmp(word,"Foo");
 	if(ignore)
 	{	return;
 	}
 #endif
 //	printf("SHOWX: %s(%s): '%.*s'\n",function,table,(int) length, word);
-	printf("SHOWX: %s(%s): '%s'\n",function,table,word);
+	printf("SHOWX: %s(%s): '%s'",function,table,word);
+	puts("");
 }
 #else
 void ShowX(const char* function,const char* table,const char* word)

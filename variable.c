@@ -363,7 +363,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
         RegisteredMangledName = TableStrRegister(pc, MangledName,strlen(MangledName));
 
         /* is this static already defined? */
-        ShowX("TableGet","GlobalTable",RegisteredMangledName,0);
+        ShowX(">TableGet","GlobalTable",RegisteredMangledName,0);
         if (!TableGet(&pc->GlobalTable, RegisteredMangledName, &ExistingValue,
                 &DeclFileName, &DeclLine, &DeclColumn)) {
             /* define the mangled-named static variable store in the global scope */
@@ -381,7 +381,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
             ExistingValue->Val, true);
         return ExistingValue;
     } else {
-        ShowX("TableGet","TopStackFrame",Ident,0);
+        ShowX(">TableGet","TopStackFrame",Ident,0);
         if (Parser->Line != 0 && TableGet((pc->TopStackFrame == NULL) ?
                     &pc->GlobalTable : &pc->TopStackFrame->LocalTable, Ident,
                     &ExistingValue, &DeclFileName, &DeclLine, &DeclColumn)
@@ -397,10 +397,10 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
 int VariableDefined(Picoc *pc, const char *Ident)
 {
     struct Value *FoundValue;
-    ShowX("TableGet","LocalTable",Ident,0);
+    ShowX(">TableGet","LocalTable",Ident,0);
     if (pc->TopStackFrame == NULL || !TableGet(&pc->TopStackFrame->LocalTable,
             Ident, &FoundValue, NULL, NULL, NULL)) 
-    {   ShowX("TableGet","GlobalTable",Ident,0);
+    {   ShowX(">TableGet","GlobalTable",Ident,0);
         if (!TableGet(&pc->GlobalTable, Ident, &FoundValue, NULL, NULL, NULL))
             return false;
     }   
@@ -624,7 +624,7 @@ void VariableStackFramePop(struct ParseState *Parser)
 struct Value *VariableStringLiteralGet(Picoc *pc, char *Ident)
 {
     struct Value *LVal = NULL;
-    ShowX("TableGet","StringLiteralTable",Ident,0);
+    ShowX(">TableGet","StringLiteralTable",Ident,0);
     if (TableGet(&pc->StringLiteralTable, Ident, &LVal, NULL, NULL, NULL))
         return LVal;
     else

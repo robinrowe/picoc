@@ -138,7 +138,7 @@ void LexCleanup(Picoc *pc)
 enum LexToken LexCheckReservedWord(Picoc *pc, const char *Word)
 {
     struct Value *val;
-    ShowX("TableGet","ReservedWordTable", Word,0);
+    ShowX(">TableGet","ReservedWordTable", Word,0);
     if (TableGet(&pc->ReservedWordTable, Word, &val, NULL, NULL, NULL))
         return ((struct ReservedWord*)val)->Token;
     else
@@ -872,7 +872,7 @@ void LexHashIfdef(struct ParseState *Parser, int IfNot)
         ProgramFail(Parser, "identifier expected");
 
     /* is the identifier defined? */
-    ShowX("TableGet","GlobalTable",IdentValue->Val->Identifier,0);
+    ShowX(">TableGet","GlobalTable",IdentValue->Val->Identifier,0);
     IsDefined = TableGet(&Parser->pc->GlobalTable, IdentValue->Val->Identifier,
         &SavedValue, NULL, NULL, NULL);
     if (Parser->HashIfEvaluateToLevel == Parser->HashIfLevel &&
@@ -895,7 +895,7 @@ void LexHashIf(struct ParseState *Parser)
 
     if (Token == TokenIdentifier) {
         /* look up a value from a macro definition */
-        ShowX("TableGet","GlobalTable",IdentValue->Val->Identifier,0);
+        ShowX(">TableGet","GlobalTable",IdentValue->Val->Identifier,0);
         if (!TableGet(&Parser->pc->GlobalTable, IdentValue->Val->Identifier,
                 &SavedValue, NULL, NULL, NULL))
             ProgramFail(Parser, "'%s' is undefined", IdentValue->Val->Identifier);

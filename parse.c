@@ -203,7 +203,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
         FuncValue->Val->FuncDef.Body.Pos = LexCopyTokens(&FuncBody, Parser);
 
         /* is this function already in the global table? */
-        ShowX("TableGet","GlobalTable",Identifier,0);
+        ShowX(">Search: TableGet","GlobalTable",Identifier,0);
         if (TableGet(&pc->GlobalTable, Identifier, &OldFuncValue, NULL, NULL, NULL)) {
             if (OldFuncValue->Val->FuncDef.Body.Pos == NULL) {
                 /* override an old function prototype */
