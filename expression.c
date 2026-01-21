@@ -1480,6 +1480,7 @@ const char* GetObjectType(struct ParseState *Parser,const char* object)
     return type_name;
 }
 
+#if 0
 const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
 {   const char* type_name = NULL;
     if (struct_name == NULL) 
@@ -1520,14 +1521,42 @@ const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **Stac
     ShowX("GetMangleName","lookup:type_name",type_name,0);
     return type_name;
 }
+#endif
 
+/* Look it up in GetTypeName */
+const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
+{
+    if (struct_name == NULL)
+        ProgramFail(Parser, "GetTypeName requires variable name");
+    /* Look up in VariableTypeTable - works in all modes */
+    struct Value *TypeValue = NULL;
+    if (TableGet(&Parser->pc->VariableTypeTable, struct_name, &TypeValue, NULL, NULL, NULL)) 
+    {
+        return TypeValue->Val->Identifier;
+    }
+#if 0
+    /* Fallback: try VariableGet for runtime */
+    if (Parser->Mode == RunModeRun) 
+    {
+        return GetObjectType(Parser, struct_name);
+    }
+#endif
+    ProgramFail(Parser, "Cannot determine type of '%s'", struct_name);
+    return NULL;
+}
 
 char* GetMangleName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
-{   const char* method_name = GetMethodName(Parser);  // member function pattern: .method() 
+{   const char* method_name = GetMethodName(Parser);  // member function pattern: .method()
+    ShowX("GetMangleName",struct_name,method_name, 0);
     if(!method_name)
     {   return 0;
     }
     const char *type_name = GetTypeName(Parser, StackTop, struct_name);
+#if 0 //don't:
+    if(!type_name)
+    {   return 0;
+    }
+#endif
     /* Build and intern mangled name */
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%s.%s", type_name, method_name);

@@ -15,6 +15,7 @@ void TableInit(Picoc *pc)
     TableInitTable(&pc->StringTable, &pc->StringHashTable[0],
             STRING_TABLE_SIZE, true);
     pc->StrEmpty = TableStrRegister(pc, "",0);
+    TableInitTable(&pc->VariableTypeTable, &pc->VariableTypeHashTable[0], VARIABLE_TYPE_TABLE_SIZE, true);
 }
 
 /* hash function for strings */

@@ -487,20 +487,12 @@ struct Picoc {
 #if defined(UNIX_HOST) || defined(WIN32)
     jmp_buf PicocExitBuf;
 #endif
-
-    /* string table */
     struct Table StringTable;
     struct TableEntry *StringHashTable[STRING_TABLE_SIZE];
     char *StrEmpty;
- #if 0   
-    /* member function call cache - used to pass function value to ExpressionParseFunctionCall */
-    struct Value *MemberFunctionCache;
-    void *MemberThisPtrCache;  /* raw pointer to struct data for 'this' */
-    struct ValueType *MemberThisTypeCache;  /* type of the struct for 'this' */
-#else
-//    int isThis;
     struct ValueType *StructType;
-#endif
+    struct Table VariableTypeTable;  /* Maps variable name -> type name */
+    struct TableEntry *VariableTypeHashTable[VARIABLE_TYPE_TABLE_SIZE];
 };
 
 void PrintLexToken(enum LexToken token);

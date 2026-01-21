@@ -56,6 +56,7 @@
 
 #define GLOBAL_TABLE_SIZE (97)                /* global variable table */
 #define STRING_TABLE_SIZE (97)                /* shared string table size */
+#define VARIABLE_TYPE_TABLE_SIZE (97)
 #define STRING_LITERAL_TABLE_SIZE (97)        /* string literal table size */
 #define RESERVED_WORD_TABLE_SIZE (97)         /* reserved word table size */
 #define PARAMETER_MAX (16)                    /* maximum number of parameters to a function */

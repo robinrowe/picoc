@@ -133,7 +133,7 @@ void DebugStep(void)
 
 void ShowX(const char* function,const char* table,const char* word,size_t length)
 {	char buffer[100];
-	if(length>99)
+	if(!word || length>99)
 	{	return;
 	}
 	if(length)
@@ -145,9 +145,11 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 	{	length = strlen(word);
 	}
 #if 1
-	int ignore = strcmp(word,"Foo.fooMethod");
-	ignore &= strcmp(word,"foo");
-	ignore &= strcmp(word,"Foo");
+	int ignore = 0;
+//	ignore |= strcmp(word,"Foo.fooMethod");
+	ignore |= strcmp(word,"Foo");
+	ignore |= strcmp(word,"foo");
+	ignore |= strcmp(word,"struct");
 	if(ignore)
 	{	return;
 	}

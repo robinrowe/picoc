@@ -26,7 +26,7 @@ void PicocInitialize(Picoc *pc, int StackSize)
     TableInit(pc);
     VariableInit(pc);
     LexInit(pc);
-    TypeInit(pc);
+    TypeInit(pc); /* initialize the type system */
     IncludeInit(pc);
     LibraryInit(pc);
     PlatformLibraryInit(pc);
