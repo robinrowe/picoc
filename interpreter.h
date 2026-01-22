@@ -405,6 +405,17 @@ struct IncludeLibrary {
 #define SPLIT_MEM_THRESHOLD (16)    /* don't split memory which is close in size */
 #define BREAKPOINT_TABLE_SIZE (21)
 
+struct TypeNameEntry 
+{
+    const char *VarName;
+    const char *TypeName;
+    struct TypeNameEntry *Next;
+};
+
+struct TypeNameTable 
+{
+    struct TypeNameEntry *HashTable[VARIABLE_TYPE_TABLE_SIZE];
+};
 
 /* the entire state of the picoc system */
 struct Picoc {
@@ -491,8 +502,12 @@ struct Picoc {
     struct TableEntry *StringHashTable[STRING_TABLE_SIZE];
     char *StrEmpty;
     struct ValueType *StructType;
+#if 0
     struct Table VariableTypeTable;  /* Maps variable name -> type name */
     struct TableEntry *VariableTypeHashTable[VARIABLE_TYPE_TABLE_SIZE];
+#else
+    struct TypeNameTable VarTypeMap;
+#endif
 };
 
 void PrintLexToken(enum LexToken token);

@@ -35,6 +35,11 @@ if(UNISTD)
 	endif(WIN32)
 endif(UNISTD)
 
+option(DEBUGGER "Enable debugger" false)
+if(DEBUGGER)
+	add_definitions(-DDEBUGGER)
+endif(DEBUGGER)
+
 add_subdirectory(./cstdlib)
 add_subdirectory(./platform)
 #add_subdirectory(./tests)

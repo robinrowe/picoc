@@ -15,7 +15,8 @@ void TableInit(Picoc *pc)
     TableInitTable(&pc->StringTable, &pc->StringHashTable[0],
             STRING_TABLE_SIZE, true);
     pc->StrEmpty = TableStrRegister(pc, "",0);
-    TableInitTable(&pc->VariableTypeTable, &pc->VariableTypeHashTable[0], VARIABLE_TYPE_TABLE_SIZE, true);
+    /* Initialize VarTypeMap hash table to NULL, not really necessary as Picoc memset everything to zero */
+    memset(pc->VarTypeMap.HashTable, 0, sizeof(pc->VarTypeMap.HashTable));
 }
 
 /* hash function for strings */
@@ -246,5 +247,45 @@ void TableStrFree(Picoc *pc)
             NextEntry = Entry->Next;
             HeapFreeMem(pc, Entry);
         }
+    }
+}
+
+/* Store: variable name -> type name */
+void StoreVarType(Picoc *pc, const char *VarName, const char *TypeName)
+{
+    int hash = TableHash(VarName, strlen(VarName)) % VARIABLE_TYPE_TABLE_SIZE;
+    struct TypeNameEntry *entry = HeapAllocMem(pc, sizeof(struct TypeNameEntry));
+    if (entry == NULL)
+        ProgramFail(pc,"StoreVarType out of memory");
+    entry->VarName = VarName;
+    entry->TypeName = TypeName;
+    entry->Next = pc->VarTypeMap.HashTable[hash];
+    pc->VarTypeMap.HashTable[hash] = entry;
+}
+
+/* Lookup: variable name -> type name */
+const char* LookupVarType(Picoc *pc, const char *VarName)
+{
+    int hash = TableHash(VarName, strlen(VarName)) % VARIABLE_TYPE_TABLE_SIZE;
+    for (struct TypeNameEntry *e = pc->VarTypeMap.HashTable[hash]; e != NULL; e = e->Next) 
+    {
+        if (e->VarName == VarName)  /* Pointer comparison - strings are interned */
+            return e->TypeName;
+    }
+    return NULL;
+}
+
+void VarTypeMapCleanup(Picoc *pc)
+{
+    for (int i = 0; i < VARIABLE_TYPE_TABLE_SIZE; i++) 
+    {
+        struct TypeNameEntry *entry = pc->VarTypeMap.HashTable[i];
+        while (entry != NULL) 
+        {
+            struct TypeNameEntry *next = entry->Next;
+            HeapFreeMem(pc, entry);
+            entry = next;
+        }
+        pc->VarTypeMap.HashTable[i] = NULL;
     }
 }

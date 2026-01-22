@@ -1,4 +1,8 @@
 /* table.h */
+
+#ifndef table_h
+#define table_h
+
 void TableInit(Picoc *pc);
 char *TableStrRegister(Picoc *pc, const char *Str, size_t Len);
 char *TableMemberFunctionRegister(Picoc *pc, const char *Str);
@@ -15,3 +19,9 @@ void TableStrFree(Picoc *pc);
 unsigned int TableHash(const char *Key, int Len);
 struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,int *AddAt);
 struct TableEntry *TableSearchIdentifier(struct Table *Tbl,const char *Key, int Len, int *AddAt);
+/* Store: variable name -> type name */
+void StoreVarType(Picoc *pc, const char *VarName, const char *TypeName);
+/* Lookup: variable name -> type name */
+const char* LookupVarType(Picoc *pc, const char *VarName);
+
+#endif

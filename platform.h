@@ -45,7 +45,6 @@
 #undef DEBUG_LEXER
 #undef DEBUG_VAR_SCOPE
 
-
 #if defined(__hppa__) || defined(__sparc__)
 /* the default data type to use for alignment */
 #define ALIGN_TYPE double
@@ -54,16 +53,30 @@
 #define ALIGN_TYPE void*
 #endif
 
-#define GLOBAL_TABLE_SIZE (97)                /* global variable table */
-#define STRING_TABLE_SIZE (97)                /* shared string table size */
-#define VARIABLE_TYPE_TABLE_SIZE (97)
-#define STRING_LITERAL_TABLE_SIZE (97)        /* string literal table size */
-#define RESERVED_WORD_TABLE_SIZE (97)         /* reserved word table size */
-#define PARAMETER_MAX (16)                    /* maximum number of parameters to a function */
-#define LINEBUFFER_MAX (256)                  /* maximum number of characters on a line */
-#define LOCAL_TABLE_SIZE (11)                 /* size of local variable table (can expand) */
-#define STRUCT_TABLE_SIZE (11)                /* size of struct/union member table (can expand) */
-//#define MEMBER_FUNCTION_TABLE_SIZE (11)       /* size of member function table (can expand) */
+/* Common hash prime choices for hash tables:
+
+Small: 53, 97, 193
+Medium: 389, 769, 1543
+Large: 3079, 6151, 12289 
+
+Why prime numbers for hash table sizes:
+
+Better distribution - Prime numbers reduce clustering because they don't share common factors with typical data patterns
+Fewer collisions - When you do hash % 97, you get better spread across buckets than with composite numbers like 100
+Mathematical properties - Primes minimize the chance that your hash function and table size interact badly */
+
+#define HASH_PRIME 97
+
+#define GLOBAL_TABLE_SIZE (HASH_PRIME)    /* global variable table */
+#define STRING_TABLE_SIZE (HASH_PRIME)    /* shared string table size */
+#define VARIABLE_TYPE_TABLE_SIZE (HASH_PRIME) /* varialbe-type table size */
+#define STRING_LITERAL_TABLE_SIZE (HASH_PRIME) /* string literal table size */
+#define RESERVED_WORD_TABLE_SIZE (HASH_PRIME)  /* reserved word table size */
+#define PARAMETER_MAX (16)     /* maximum number of parameters to a function */
+#define LINEBUFFER_MAX (256)   /* maximum number of characters on a line */
+#define LOCAL_TABLE_SIZE (11)  /* size of local variable table (can expand) */
+#define STRUCT_TABLE_SIZE (11) /* size of struct/union member table (can expand) */
+
 #ifdef _WIN32
 #define INTERACTIVE_PROMPT_START "starting " PROGRAM_NAME " " PROGRAM_VERSION " (Ctrl+C to quit)\n"
 #else
@@ -73,7 +86,6 @@
 #define INTERACTIVE_PROMPT_LINE "     > "
 
 extern jmp_buf ExitBuf;
-
 
 /* platform.h */
 /* the following are defined in picoc.h:
@@ -99,6 +111,5 @@ void PlatformVPrintf(IOFILE *Stream, const char *Format, va_list Args);
 void PlatformExit(Picoc *pc, int ExitVal);
 char *PlatformMakeTempName(Picoc *pc, char *TempNameBuffer);
 void PlatformLibraryInit(Picoc *pc);
-
 
 #endif /* PLATFORM_H */

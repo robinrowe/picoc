@@ -131,6 +131,8 @@ void DebugStep(void)
 
 #ifdef SHOWX
 
+#define CHECK(x) show |= !strcmp(word,x); show<<=1
+
 void ShowX(const char* function,const char* table,const char* word,size_t length)
 {	char buffer[100];
 	if(!word || length>99)
@@ -145,12 +147,12 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 	{	length = strlen(word);
 	}
 #if 1
-	int ignore = 0;
-//	ignore |= strcmp(word,"Foo.fooMethod");
-	ignore |= strcmp(word,"Foo");
-	ignore |= strcmp(word,"foo");
-	ignore |= strcmp(word,"struct");
-	if(ignore)
+	unsigned show = 0;
+//	CHECK("Foo.fooMethod");
+//	CHECK("Foo"); 
+	CHECK("foo"); 
+//	CHECK("struct"); 
+	if(!show)
 	{	return;
 	}
 #endif

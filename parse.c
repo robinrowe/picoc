@@ -393,6 +393,65 @@ void ParseDeclarationAssignment(struct ParseState *Parser,
     }
 }
 
+#if 1
+
+/* declare a variable or function */
+int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
+{
+    int IsStatic = false;
+    int FirstVisit = false;
+    char *Identifier;
+    struct ValueType *BasicType;
+    struct ValueType *Typ;
+    struct Value *NewVariable = NULL;
+    Picoc *pc = Parser->pc;
+
+    TypeParseFront(Parser, &BasicType, &IsStatic);
+    do {
+        TypeParseIdentPart(Parser, BasicType, &Typ, &Identifier);
+        if ((Token != TokenVoidType && Token != TokenStructType &&
+                Token != TokenUnionType && Token != TokenEnumType) &&
+                Identifier == pc->StrEmpty)
+            ProgramFail(Parser, "identifier expected");
+
+        if (Identifier != pc->StrEmpty) {
+            /* handle function definitions */
+            if (LexGetToken(Parser, NULL, false) == TokenOpenParen)
+            {   struct ValueType *type_unknown = 0;
+                ParseFunctionDefinition(Parser, Typ, Identifier,type_unknown);
+                return false;
+            } else {
+                if (Typ == &pc->VoidType && Identifier != pc->StrEmpty)
+                    ProgramFail(Parser, "can't define a void variable");
+
+                if (Parser->Mode == RunModeRun || Parser->Mode == RunModeGoto)
+                    NewVariable = VariableDefineButIgnoreIdentical(Parser,
+                        Identifier, Typ, IsStatic, &FirstVisit);
+#if 0
+                if (Parser->Mode == RunModeSkip && Typ->Base == TypeStruct && Typ->Identifier != NULL && Identifier != pc->StrEmpty) 
+                {   /* Store strings mapping: variable name -> type name */
+                    StoreVarType(pc, Identifier, Typ->Identifier);
+                }
+#endif
+                if (LexGetToken(Parser, NULL, false) == TokenAssign) {
+                    /* we're assigning an initial value */
+                    LexGetToken(Parser, NULL, true);
+                    ParseDeclarationAssignment(Parser, NewVariable,
+                        !IsStatic || FirstVisit);
+                }
+            }
+        }
+
+        Token = LexGetToken(Parser, NULL, false);
+        if (Token == TokenComma)
+            LexGetToken(Parser, NULL, true);
+    } while (Token == TokenComma);
+
+    return true;
+}
+
+#else
+
 /* declare a variable or function */
 int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
 {
@@ -423,9 +482,13 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
                     ProgramFail(Parser, "can't define a void variable");
 
                 if (Parser->Mode == RunModeRun || Parser->Mode == RunModeGoto)
-                    NewVariable = VariableDefineButIgnoreIdentical(Parser,
+                {    NewVariable = VariableDefineButIgnoreIdentical(Parser,
                         Identifier, Typ, IsStatic, &FirstVisit);
-
+                }
+                if (Parser->Mode == RunModeSkip && Typ->Base == TypeStruct && Typ->Identifier != NULL && Identifier != pc->StrEmpty) 
+                {   /* Store strings mapping: variable name -> type name */
+                    //StoreVarType(pc, Identifier, Typ->Identifier);
+                }
                 if (LexGetToken(Parser, NULL, false) == TokenAssign) {
                     /* we're assigning an initial value */
                     LexGetToken(Parser, NULL, true);
@@ -443,6 +506,7 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
     return true;
 }
 
+#endif
 /* parse a #define macro definition and store it for later */
 void ParseMacroDefinition(struct ParseState *Parser)
 {

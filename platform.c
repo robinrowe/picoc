@@ -45,6 +45,7 @@ void PicocCleanup(Picoc *pc)
     ParseCleanup(pc);
     LexCleanup(pc);
     VariableCleanup(pc);
+    VarTypeMapCleanup(pc);
     TypeCleanup(pc);
     TableStrFree(pc);
     HeapCleanup(pc);
