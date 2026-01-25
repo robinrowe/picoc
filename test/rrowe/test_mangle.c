@@ -1,4 +1,4 @@
-// test_simple.c 
+// test_mangle.c 
 
 #include <stdio.h>
 

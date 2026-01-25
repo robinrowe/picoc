@@ -1211,6 +1211,11 @@ void ExpressionStackCollapse(struct ParseState *Parser,
 #endif
                 TopValue = TopStackNode->Val;
                 if (TopValue != NULL) {
+                    if(!TopOperatorNode->Next)
+                    {   puts("Error in TopStackNode, this shouldn't happen");
+                        TopStackNode->Val = 0;
+                        break;
+                    }
                     BottomValue = TopOperatorNode->Next->Val;
 
                     /* pop a value, the operator and another value - assume
@@ -1453,23 +1458,6 @@ int TypeLookup(Picoc *pc, const char *TypeName, struct ValueType **StructType)
 }
 #endif
 
-// Check for pattern .method(  
-const char* GetMethodName(struct ParseState *Parser)
-{   struct Value *MemberIdent = NULL;
-    struct ParseState PeekState;
-    ParserCopy(&PeekState, Parser);
-    enum LexToken token = LexGetToken(&PeekState, NULL, true);
-    if (token != TokenDot)
-        return NULL;
-    token = LexGetToken(&PeekState, &MemberIdent, true);
-    if (token != TokenIdentifier)
-        return NULL;
-    token = LexGetToken(&PeekState, NULL, false);
-    if (token != TokenOpenParen)
-        return NULL;
-    return MemberIdent->Val->Identifier;
-}
-
 const char* GetObjectType(struct ParseState *Parser,const char* object)
 {   /* Look up the variable to get its type */
     struct Value *ObjValue = NULL;
@@ -1544,6 +1532,23 @@ const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **Stac
     return NULL;
 }
 
+// Check for pattern .method(  
+const char* GetMethodName(struct ParseState *Parser)
+{   struct Value *MemberIdent = NULL;
+    struct ParseState PeekState;
+    ParserCopy(&PeekState, Parser);
+    enum LexToken token = LexGetToken(&PeekState, NULL, true);
+    if (token != TokenDot)
+        return NULL;
+    token = LexGetToken(&PeekState, &MemberIdent, true);
+    if (token != TokenIdentifier)
+        return NULL;
+    token = LexGetToken(&PeekState, NULL, false);
+    if (token != TokenOpenParen)
+        return NULL;
+    return MemberIdent->Val->Identifier;
+}
+
 char* GetMangleName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
 {   const char* method_name = GetMethodName(Parser);  // member function pattern: .method()
     ShowX("GetMangleName",struct_name,method_name, 0);
@@ -1607,9 +1612,25 @@ void ParseTokenIdentifier(struct ParseState *Parser, struct ExpressionStack **St
         /* Regular function call */
         ExpressionParseFunctionCall(Parser, StackTop, TokenName,
             Parser->Mode == RunModeRun && *Precedence < *IgnorePrecedence);
-    } else {
+    } else 
+    {
         /* Variable reference */
-        // ... existing variable handling code ...
+        // Claude cut-and-paste error:
+        //... existing variable handling code ...
+            /* Variable reference - from original working code */
+    if (Parser->Mode == RunModeRun /* && *Precedence < *IgnorePrecedence */) {
+        struct Value *VariableValue = NULL;
+
+        VariableGet(Parser->pc, Parser, TokenName, &VariableValue);
+        if (VariableValue->Typ->Base == TypeMacro) {
+            /* ... handle macro ... */
+        } else if (VariableValue->Typ == &Parser->pc->VoidType)
+            ProgramFail(Parser, "a void value isn't much use here");
+        else
+            ExpressionStackPushLValue(Parser, StackTop,
+            VariableValue, 0); /* it's a value variable */
+    } else /* push a dummy value */
+        ExpressionPushInt(Parser, StackTop, 0);
     }
     
     *PrefixState = false;

@@ -425,9 +425,11 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
                     ProgramFail(Parser, "can't define a void variable");
 
                 if (Parser->Mode == RunModeRun || Parser->Mode == RunModeGoto)
-                    NewVariable = VariableDefineButIgnoreIdentical(Parser,
+                {    NewVariable = VariableDefineButIgnoreIdentical(Parser,
                         Identifier, Typ, IsStatic, &FirstVisit);
-#if 0
+                    ShowX("ParseDeclaration","NewVariable",Identifier,0);
+                }
+#if 1
                 if (Parser->Mode == RunModeSkip && Typ->Base == TypeStruct && Typ->Identifier != NULL && Identifier != pc->StrEmpty) 
                 {   /* Store strings mapping: variable name -> type name */
                     StoreVarType(pc, Identifier, Typ->Identifier);
