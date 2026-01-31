@@ -1,42 +1,63 @@
-/* parse.h */
-/* the following are defined in engine.h:
- * void EngineParse(const char *FileName, const char *Source, int SourceLen, int RunIt, int CleanupNow, int CleanupSource);
- * void EngineParseInteractive(); */
+/* parse.h - Main parser interface */
+#ifndef PARSE_H
+#define PARSE_H
 
- #ifndef parse_h
- #define parse_h
+#include "interpreter.h"
 
+/* Forward declarations */
 typedef struct Engine Engine;
+typedef struct ParseState ParseState;
+typedef struct Value Value;
+typedef struct ValueType ValueType;
 typedef FILE IOFILE;
- 
-/* parser state - has all this detail so we can parse nested files */
+
+/* Parser state */
 struct ParseState {
-    struct Engine *pc;                  /* the itrapc instance this parser is a part of */
-    const unsigned char *Pos;   /* the character position in the source text */
-    char *FileName;             /* what file we're executing (registered string) */
-    short int Line;             /* line number we're executing */
-    short int CharacterPos;     /* character/column in the line we're executing */
-    enum RunMode Mode;          /* whether to skip or run code */
-    int SearchLabel;            /* what case label we're searching for */
-    const char *SearchGotoLabel;/* what goto label we're searching for */
-    const char *SourceText;     /* the entire source text */
-    short int HashIfLevel;      /* how many "if"s we're nested down */
-    short int HashIfEvaluateToLevel;    /* if we're not evaluating an if branch,
-                                          what the last evaluated level was */
-    char DebugMode;             /* debugging mode */
-    int ScopeID;   /* for keeping track of local variables (free them after t
-                      hey go out of scope) */
+    Engine *pc;                         /* the itrapc instance */
+    const unsigned char *Pos;           /* character position in source */
+    char *FileName;                     /* file being executed */
+    short int Line;                     /* line number */
+    short int CharacterPos;             /* character/column in line */
+    enum RunMode Mode;                  /* whether to skip or run code */
+    int SearchLabel;                    /* case label searching for */
+    const char *SearchGotoLabel;        /* goto label searching for */
+    const char *SourceText;             /* entire source text */
+    short int HashIfLevel;              /* nested #if level */
+    short int HashIfEvaluateToLevel;    /* last evaluated #if level */
+    char DebugMode;                     /* debugging mode */
+    int ScopeID;                        /* local variable scope tracking */
 };
 
-void EngineParseInteractiveNoStartPrompt(Engine *pc, int EnableDebugger);
-enum ParseResult ParseStatement(struct ParseState *Parser,
-    int CheckTrailingSemicolon);
-struct Value *ParseFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *ReturnType, char *Identifier,struct ValueType *this_type);
-void ParseCleanup(Engine *pc);
-void ParserCopyPos(struct ParseState *To, struct ParseState *From);
-void ParserCopy(struct ParseState *To, struct ParseState *From);
-struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,
-    struct ValueType *StructType, struct ValueType *ReturnType, char *Identifier);
+/* Result codes */
+enum ParseResult {
+    ParseResultOk,
+    ParseResultError,
+    ParseResultEOF
+};
 
-#endif
+/* Public API functions */
+void EngineParse(Engine *pc, const char *FileName, const char *Source,
+    int SourceLen, int RunIt, int CleanupNow, int CleanupSource,
+    int EnableDebugger);
+void EngineParseInteractive(Engine *pc);
+void EngineParseInteractiveNoStartPrompt(Engine *pc, int EnableDebugger);
+void ParseCleanup(Engine *pc);
+
+/* Core parsing functions */
+enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon);
+enum ParseResult ParseStatementMaybeRun(ParseState *Parser,
+    int Condition, int CheckTrailingSemicolon);
+enum RunMode ParseBlock(ParseState *Parser, int AbsorbOpenBrace, int Condition);
+
+/* Function parsing */
+Value *ParseFunctionDefinition(ParseState *Parser, ValueType *ReturnType,
+    char *Identifier, ValueType *this_type);
+Value *ParseMemberFunctionDefinition(ParseState *Parser, ValueType *StructType,
+    ValueType *ReturnType, char *function_name);
+int ParseCountParams(ParseState *Parser);
+
+/* Utility functions */
+void ParserCopy(ParseState *To, ParseState *From);
+void ParserCopyPos(ParseState *To, ParseState *From);
+
+#endif /* PARSE_H */

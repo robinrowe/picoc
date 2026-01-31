@@ -345,9 +345,9 @@ struct OutputStream {
     union OutputStreamInfo i;
 };
 
-/* possible results of parsing a statement */
+/* possible results of parsing a statement 
 enum ParseResult { ParseResultEOF, ParseResultError, ParseResultOk };
-
+*/
 /* a chunk of heap-allocated tokens we'll cleanup when we're done */
 struct CleanupTokenNode {
     void *Tokens;
