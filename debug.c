@@ -8,7 +8,7 @@
 
 #ifdef DEBUGGER
 /* initialize the debugger by clearing the breakpoint table */
-void DebugInit(Picoc *pc)
+void DebugInit(Engine *pc)
 {
     TableInitTable(&pc->BreakpointTable, &pc->BreakpointHashTable[0],
         BREAKPOINT_TABLE_SIZE, true);
@@ -16,7 +16,7 @@ void DebugInit(Picoc *pc)
 }
 
 /* free the contents of the breakpoint table */
-void DebugCleanup(Picoc *pc)
+void DebugCleanup(Engine *pc)
 {
     struct TableEntry *Entry;
     struct TableEntry *NextEntry;
@@ -36,7 +36,7 @@ static struct TableEntry *DebugTableSearchBreakpoint(struct ParseState *Parser,
     int *AddAt)
 {
     struct TableEntry *Entry;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
     int HashValue = BREAKPOINT_HASH(Parser) % pc->BreakpointTable.Size;
 
     for (Entry = pc->BreakpointHashTable[HashValue];
@@ -56,7 +56,7 @@ void DebugSetBreakpoint(struct ParseState *Parser)
 {
     int AddAt;
     struct TableEntry *FoundEntry = DebugTableSearchBreakpoint(Parser, &AddAt);
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     if (FoundEntry == NULL) {
         /* add it to the table */
@@ -77,7 +77,7 @@ void DebugSetBreakpoint(struct ParseState *Parser)
 int DebugClearBreakpoint(struct ParseState *Parser)
 {
     struct TableEntry **EntryPtr;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
     int HashValue = BREAKPOINT_HASH(Parser) % pc->BreakpointTable.Size;
 
     for (EntryPtr = &pc->BreakpointHashTable[HashValue];
@@ -103,7 +103,7 @@ void DebugCheckStatement(struct ParseState *Parser)
 {
     int DoBreak = false;
     int AddAt;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     /* has the user manually pressed break? */
     if (pc->DebugManualBreak) {
@@ -120,7 +120,7 @@ void DebugCheckStatement(struct ParseState *Parser)
     /* handle a break */
     if (DoBreak) {
         PlatformPrintf(pc->CStdOut, "Handling a break\n");
-        PicocParseInteractiveNoStartPrompt(pc, false);
+        EngineParseInteractiveNoStartPrompt(pc, false);
     }
 }
 

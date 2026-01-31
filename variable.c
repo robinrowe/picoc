@@ -11,7 +11,7 @@
 
 
 /* initialize the variable system */
-void VariableInit(Picoc *pc)
+void VariableInit(Engine *pc)
 {
     TableInitTable(&(pc->GlobalTable), &(pc->GlobalHashTable)[0],
         GLOBAL_TABLE_SIZE, true);
@@ -21,7 +21,7 @@ void VariableInit(Picoc *pc)
 }
 
 /* deallocate the contents of a variable */
-void VariableFree(Picoc *pc, struct Value *Val)
+void VariableFree(Engine *pc, struct Value *Val)
 {
     if (Val->ValOnHeap || Val->AnyValOnHeap) {
         /* free function bodies */
@@ -45,7 +45,7 @@ void VariableFree(Picoc *pc, struct Value *Val)
 }
 
 /* deallocate the global table and the string literal table */
-void VariableTableCleanup(Picoc *pc, struct Table *HashTable)
+void VariableTableCleanup(Engine *pc, struct Table *HashTable)
 {
     int Count;
     struct TableEntry *Entry;
@@ -64,7 +64,7 @@ void VariableTableCleanup(Picoc *pc, struct Table *HashTable)
     }
 }
 
-void VariableCleanup(Picoc *pc)
+void VariableCleanup(Engine *pc)
 {
     VariableTableCleanup(pc, &pc->GlobalTable);
     VariableTableCleanup(pc, &pc->StringLiteralTable);
@@ -72,7 +72,7 @@ void VariableCleanup(Picoc *pc)
 
 /* allocate some memory, either on the heap or the stack
     and check if we've run out */
-void *VariableAlloc(Picoc *pc, struct ParseState *Parser, int Size, int OnHeap)
+void *VariableAlloc(Engine *pc, struct ParseState *Parser, int Size, int OnHeap)
 {
     void *NewValue;
 
@@ -94,7 +94,7 @@ void *VariableAlloc(Picoc *pc, struct ParseState *Parser, int Size, int OnHeap)
 
 /* allocate a value either on the heap or the stack using space
     dependent on what type we want */
-struct Value *VariableAllocValueAndData(Picoc *pc, struct ParseState *Parser,
+struct Value *VariableAllocValueAndData(Engine *pc, struct ParseState *Parser,
     int DataSize, int IsLValue, struct Value *LValueFrom, int OnHeap)
 {
     struct Value *NewValue = VariableAlloc(pc, Parser,
@@ -116,7 +116,7 @@ struct Value *VariableAllocValueAndData(Picoc *pc, struct ParseState *Parser,
 }
 
 /* allocate a value given its type */
-struct Value *VariableAllocValueFromType(Picoc *pc, struct ParseState *Parser,
+struct Value *VariableAllocValueFromType(Engine *pc, struct ParseState *Parser,
     struct ValueType *Typ, int IsLValue, struct Value *LValueFrom, int OnHeap)
 {
     int Size = TypeSize(Typ, Typ->ArraySize, false);
@@ -130,7 +130,7 @@ struct Value *VariableAllocValueFromType(Picoc *pc, struct ParseState *Parser,
 
 /* allocate a value either on the heap or the stack and copy
     its value. handles overlapping data */
-struct Value *VariableAllocValueAndCopy(Picoc *pc, struct ParseState *Parser,
+struct Value *VariableAllocValueAndCopy(Engine *pc, struct ParseState *Parser,
     struct Value *FromValue, int OnHeap)
 {
     int CopySize = TypeSizeValue(FromValue, true);
@@ -267,7 +267,7 @@ void VariableScopeEnd(struct ParseState *Parser, int ScopeID, int PrevScopeID)
     Parser->ScopeID = PrevScopeID;
 }
 
-int VariableDefinedAndOutOfScope(Picoc *pc, const char* Ident)
+int VariableDefinedAndOutOfScope(Engine *pc, const char* Ident)
 {
     int Count;
     struct TableEntry *Entry;
@@ -290,7 +290,7 @@ int VariableDefinedAndOutOfScope(Picoc *pc, const char* Ident)
 }
 
 /* define a variable. Ident must be registered */
-struct Value *VariableDefine(Picoc *pc, struct ParseState *Parser, char *Ident,
+struct Value *VariableDefine(Engine *pc, struct ParseState *Parser, char *Ident,
     struct Value *InitValue, struct ValueType *Typ, int MakeWritable)
 {
     int ScopeID = Parser ? Parser->ScopeID : -1;
@@ -330,7 +330,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
     int DeclLine;
     int DeclColumn;
     const char *DeclFileName;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
     struct Value *ExistingValue;
 
     /* is the type a forward declaration? */
@@ -394,7 +394,7 @@ struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
 }
 
 /* check if a variable with a given name is defined. Ident must be registered */
-int VariableDefined(Picoc *pc, const char *Ident)
+int VariableDefined(Engine *pc, const char *Ident)
 {
     struct Value *FoundValue;
     ShowX(">TableGet","LocalTable",Ident,0);
@@ -411,7 +411,7 @@ int VariableDefined(Picoc *pc, const char *Ident)
 // ORIGINAL:
 
 /* get the value of a variable. must be defined. Ident must be registered */
-void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
+void VariableGet(Engine *pc, struct ParseState *Parser, const char *Ident,
     struct Value **LVal)
 {
     if (pc->TopStackFrame == NULL || !TableGet(&pc->TopStackFrame->LocalTable,
@@ -426,7 +426,7 @@ void VariableGet(Picoc *pc, struct ParseState *Parser, const char *Ident,
 }
 #endif
 /* define a global variable shared with a platform global. Ident will be registered */
-void VariableDefinePlatformVar(Picoc *pc, struct ParseState *Parser, char *Ident,
+void VariableDefinePlatformVar(Engine *pc, struct ParseState *Parser, char *Ident,
     struct ValueType *Typ, union AnyValue *FromValue, int IsWritable)
 {
     struct Value *SomeValue = VariableAllocValueAndData(pc, NULL, 0, IsWritable,
@@ -473,7 +473,7 @@ void VariableStackPop(struct ParseState *Parser, struct Value *Var)
 void VariableStackFrameAdd(struct ParseState *Parser, const char *FuncName,
     int NumParams)
 {
-    struct StackFrame *NewFrame;
+    struct StackFrame *NewFrame = 0;
 
     HeapPushStackFrame(Parser->pc);
     NewFrame = HeapAllocStack(Parser->pc,
@@ -505,7 +505,7 @@ void VariableStackFramePop(struct ParseState *Parser)
 
 /* get a string literal. assumes that Ident is already
     registered. NULL if not found */
-struct Value *VariableStringLiteralGet(Picoc *pc, char *Ident)
+struct Value *VariableStringLiteralGet(Engine *pc, char *Ident)
 {
     struct Value *LVal = NULL;
     ShowX(">TableGet","StringLiteralTable",Ident,0);
@@ -516,7 +516,7 @@ struct Value *VariableStringLiteralGet(Picoc *pc, char *Ident)
 }
 
 /* define a string literal. assumes that Ident is already registered */
-void VariableStringLiteralDefine(Picoc *pc, char *Ident, struct Value *Val)
+void VariableStringLiteralDefine(Engine *pc, char *Ident, struct Value *Val)
 {
     TableSet(pc, &pc->StringLiteralTable, Ident, Val, NULL, 0, 0);
 }

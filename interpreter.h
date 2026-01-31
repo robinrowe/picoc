@@ -7,40 +7,11 @@
 #include "platform.h"
 #include "parse.h"
 
+typedef struct Engine Engine;
+
 #ifndef NULL
 #define NULL 0
 #endif
-
-/*
-#ifndef min
-#define min(x,y) (((x)<(y))?(x):(y))
-#endif
-#ifndef min
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-*/
-/* Get the name of a type */
-// #define typename(x) _Generic((x),   \
-//     _Bool: "_Bool", \
-//     unsigned char: "unsigned char", \
-//     char: "char", \
-//     signed char: "signed char", \
-//     short int: "short int", \
-//     unsigned short int: "unsigned short int",   \
-//     int: "int", \
-//     unsigned int: "unsigned int", \
-//     long int: "long int", \
-//     unsigned long int: "unsigned long int", \
-//     long long int: "long long int", \
-//     unsigned long long int: "unsigned long long int", \
-//     float: "float", \
-//     double: "double", \
-//     long double: "long double", \
-//     char *: "pointer to char", \
-//     void *: "pointer to void", \
-//     int *: "pointer to int", \
-//     default: "other") (x)
-
 
 #define MEM_ALIGN(x) (((x) + sizeof(ALIGN_TYPE)-1) & ~(sizeof(ALIGN_TYPE)-1))
 
@@ -395,7 +366,7 @@ struct TokenLine {
 /* a list of libraries we can include */
 struct IncludeLibrary {
     char *IncludeName;
-    void (*SetupFunction)(Picoc *pc);
+    void (*SetupFunction)(Engine *pc);
     struct LibraryFunction *FuncList;
     const char *SetupCSource;
     struct IncludeLibrary *NextLib;
@@ -418,7 +389,7 @@ struct TypeNameTable
 };
 
 /* the entire state of the itrapc system */
-struct Picoc {
+struct Engine {
     /* parser global data */
     struct Table GlobalTable;
     struct CleanupTokenNode *CleanupTokenList;
@@ -442,7 +413,7 @@ struct Picoc {
     struct StackFrame *TopStackFrame;
 
     /* the value passed to exit() */
-    int PicocExitValue;
+    int EngineExitValue;
 
     /* a list of libraries we can include */
     struct IncludeLibrary *IncludeLibList;
@@ -496,7 +467,7 @@ struct Picoc {
 
     /* exit longjump buffer */
 #if defined(UNIX_HOST) || defined(WIN32)
-    jmp_buf PicocExitBuf;
+    jmp_buf EngineExitBuf;
 #endif
     struct Table StringTable;
     struct TableEntry *StringHashTable[STRING_TABLE_SIZE];

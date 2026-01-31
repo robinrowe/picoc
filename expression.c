@@ -28,13 +28,13 @@
 #define DEEP_PRECEDENCE (BRACKET_PRECEDENCE*1000)
 
 #ifdef DEBUG_EXPRESSIONS
-static void ExpressionStackShow(Picoc *pc, struct ExpressionStack *StackTop);
+static void ExpressionStackShow(Engine *pc, struct ExpressionStack *StackTop);
 #endif
 
 
 #ifdef DEBUG_EXPRESSIONS
 /* show the contents of the expression stack */
-void ExpressionStackShow(Picoc *pc, struct ExpressionStack *StackTop)
+void ExpressionStackShow(Engine *pc, struct ExpressionStack *StackTop)
 {
     printf("Expression stack [0x%lx,0x%lx]: ", (long)pc->HeapStackTop, (long)StackTop);
 
@@ -1295,7 +1295,7 @@ void ExpressionStackPushOperator(struct ParseState *Parser,
 void ExpressionGetStructElement(struct ParseState *Parser,
     struct ExpressionStack **StackTop, enum LexToken Token)
 {
-    struct Value *Ident;
+    struct Value *Ident = 0;
 
     /* get the identifier following the '.' or '->' */
     if (LexGetToken(Parser, &Ident, true) != TokenIdentifier)
@@ -1388,76 +1388,6 @@ void ExpressionMemberFunctionCall(struct ParseState *Parser,
     ExpressionParseFunctionCall(Parser, StackTop, FunctionName, Parser->Mode == RunModeRun);
 }
 
-#if 0
-void ExpressionMemberFunctionCall(struct ParseState *Parser,
-    struct ExpressionStack **StackTop, enum LexToken Token, const char *MemberName)
-{   struct Value *ParamVal = (*StackTop)->Val;
-    struct Value *StructVal = ParamVal;
-    struct ValueType *StructType = ParamVal->Typ;
-    struct Value *Ident;
-
-#ifdef VERBOSE
-    fprintf(stderr, "DEBUG: ExpressionMemberFunctionCall called\n");
-    fprintf(stderr, "DEBUG: StackTop->Val->Typ->Base = %d\n", StructType->Base);
-    fprintf(stderr, "DEBUG: Token = %d (Dot=%d, Arrow=%d)\n", Token, TokenDot, TokenArrow);
-    fprintf(stderr, "DEBUG: TypeStruct = %d\n", TypeStruct);
-    fflush(stderr);
-#endif
-
-    /* consume the identifier token (should match MemberName) */
-    if (LexGetToken(Parser, &Ident, true) != TokenIdentifier)
-        ProgramFail(Parser, "identifier expected");
-    assert(!strcmp(MemberName,Ident));
-    /* if we're doing '->' dereference the struct pointer first */
-    if (Token == TokenArrow)
-        if (StructType->Base != TypeStruct)
-            ProgramFail(Parser, "member functions can only be called on structs (got %t)", StructType);
-    /* Pop the struct from expression stack AND heap together */
-    /* Build the mangled function name: StructType.MemberName */
-    const char *TypeName = StructType->Identifier;
-    char MangledName[256];
-    snprintf(MangledName, sizeof(MangledName), "%s.%s", TypeName, MemberName);
-    /* Intern the mangled name */
-    char *FunctionName = TableStrRegister(Parser->pc, MangledName, strlen(MangledName));
-    HeapPopStack(Parser->pc, ParamVal,
-        sizeof(struct ExpressionStack) +
-        sizeof(struct Value) +
-        TypeStackSizeValue(StructVal));
-    *StackTop = (*StackTop)->Next;
-    /* Call the member function */
-    ExpressionParseFunctionCall(Parser, StackTop, MemberName, Parser->Mode == RunModeRun);
-}
-#endif
-
-#if 0
-/* Look up a struct type by name in the type system
- * Returns TRUE if found, FALSE otherwise
- * Sets *StructType to the found type if successful
- */
-int TypeLookup(Picoc *pc, const char *TypeName, struct ValueType **StructType)
-{   struct ValueType *SearchType;
-    /* Search through the UberType's derived type list for matching struct types */
-    for (SearchType = pc->UberType.DerivedTypeList; SearchType != NULL; SearchType = SearchType->Next) {
-        /* Check if it's a struct type with matching name */
-        if(SearchType->Identifier != NULL)
-        {
-#ifdef MAGIC
-            printf("MAGIC: TypeLookup: checking %s\n",SearchType->Identifier);
-#endif
-            if (SearchType->Base == TypeStruct &&
-            /* Use pointer comparison since identifiers are interned */
-            SearchType->Identifier == TypeName) 
-            {   *StructType = SearchType;
-                return 1;
-            }
-    }   }
-#ifdef MAGIC
-        printf("MAGIC: TypeLookup: NOT found = %s\n",TypeName);
-#endif
-    return 0;  /* Type not found */
-}
-#endif
-
 const char* GetObjectType(struct ParseState *Parser,const char* object)
 {   /* Look up the variable to get its type */
     struct Value *ObjValue = NULL;
@@ -1468,48 +1398,6 @@ const char* GetObjectType(struct ParseState *Parser,const char* object)
     return type_name;
 }
 
-#if 0
-const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
-{   const char* type_name = NULL;
-    if (struct_name == NULL) 
-    {   /* Get struct from stack */
-        if (*StackTop == NULL || (*StackTop)->Val == NULL)
-            ProgramFail(Parser, "Empty StackTop");
-        struct ValueType *StructType = (*StackTop)->Val->Typ;
-        /* Handle pointer dereference for -> */
-        if (StructType->Base == TypePointer)
-            StructType = StructType->FromType;
-        if (StructType->Base != TypeStruct)
-            ProgramFail(Parser, "Expected struct");
-        type_name = StructType->Identifier;
-        ShowX("GetMangleName","stack:type_name",type_name,0);
-        return type_name;
-    } 
-    if (Parser->Mode == RunModeRun) 
-    {   /* Look up variable by name */
-        struct Value *VarValue = NULL;
-        VariableGet(Parser->pc, Parser, struct_name, &VarValue);
-        if (VarValue->Typ->Base != TypeStruct)
-            ProgramFail(Parser, "Expected struct");
-        type_name = VarValue->Typ->Identifier;
-        ShowX("GetMangleName","passed:type_name",type_name,0);
-        return type_name;
-    } 
-#if 0
-    /* Parse mode - try type lookup */
-    struct ValueType *StructType = NULL;
-    if (!TypeLookup(Parser->pc, struct_name, &StructType)) {
-        LexGetToken(Parser, NULL, true);
-        LexGetToken(Parser, NULL, true);
-        ProgramFail(Parser, "Expected type lookup");
-    }
-    type_name = StructType->Identifier;
-#endif
-    type_name = GetObjectType(Parser,struct_name);
-    ShowX("GetMangleName","lookup:type_name",type_name,0);
-    return type_name;
-}
-#endif
 
 /* Look it up in GetTypeName */
 const char* GetTypeName(struct ParseState *Parser, struct ExpressionStack **StackTop, const char *struct_name)
@@ -1648,7 +1536,7 @@ int ExpressionParse(struct ParseState *Parser, struct Value **Result)
     int Precedence = 0;
     int IgnorePrecedence = DEEP_PRECEDENCE;
     int TernaryDepth = 0;
-    struct Value *LexValue;
+    struct Value *LexValue = 0;
     struct ExpressionStack *StackTop = NULL;
 
 #ifdef DEBUG_EXPRESSIONS
@@ -1907,7 +1795,7 @@ void ExpressionParseMacroCall(struct ParseState *Parser,
     int ArgCount;
     enum LexToken Token;
     struct Value *ReturnValue = NULL;
-    struct Value *Param;
+    struct Value *Param = 0;
     struct Value **ParamArray = NULL;
 
     if (Parser->Mode == RunModeRun) {

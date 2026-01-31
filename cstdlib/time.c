@@ -122,7 +122,7 @@ struct LibraryFunction StdTimeFunctions[] =
 
 
 /* creates various system-dependent definitions */
-void StdTimeSetupFunc(Picoc *pc)
+void StdTimeSetupFunc(Engine *pc)
 {
     /* make a "struct tm" which is the same size as a native tm structure */
     TypeCreateOpaqueStruct(pc, NULL, TableStrRegister(pc, "tm"),

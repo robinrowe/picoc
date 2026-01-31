@@ -12,7 +12,7 @@ static int falseValue = 0;
 const char StdboolDefs[] = "typedef int bool;";
 
 /* creates various system-dependent definitions */
-void StdboolSetupFunc(Picoc *pc)
+void StdboolSetupFunc(Engine *pc)
 {
     /* defines */
     VariableDefinePlatformVar(pc, NULL, "true", &pc->IntType,

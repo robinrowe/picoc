@@ -1,5 +1,5 @@
 /*  */
-#include "engine.h"
+#include "itrapc.h"
 #include "interpreter.h"
 #include "table.h"
 #include "lex.h"
@@ -12,7 +12,7 @@ static int LittleEndian;
 
 
 /* global initialisation for libraries */
-void LibraryInit(Picoc *pc)
+void LibraryInit(Engine *pc)
 {
 
     /* define the version number macro */
@@ -31,14 +31,14 @@ void LibraryInit(Picoc *pc)
 }
 
 /* add a library */
-void LibraryAdd(Picoc *pc, struct LibraryFunction *FuncList)
+void LibraryAdd(Engine *pc, struct LibraryFunction *FuncList)
 {
     struct ParseState Parser;
     int Count;
-    char *Identifier;
-    struct ValueType *ReturnType;
-    struct Value *NewValue;
-    void *Tokens;
+    char *Identifier = 0;
+    struct ValueType *ReturnType = 0;
+    struct Value *NewValue = 0;
+    void *Tokens = 0;
     char *IntrinsicName = TableStrRegister(pc, "c library",9);
 
     /* read all the library definitions */

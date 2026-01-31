@@ -1,14 +1,14 @@
 
 /* heap.h */
 #ifdef DEBUG_HEAP
-void ShowBigList(Picoc *pc);
+void ShowBigList(Engine *pc);
 #endif
-void HeapInit(Picoc *pc, int StackSize);
-void HeapCleanup(Picoc *pc);
-void *HeapAllocStack(Picoc *pc, int Size);
-int HeapPopStack(Picoc *pc, void *Addr, int Size);
-void HeapUnpopStack(Picoc *pc, int Size);
-void HeapPushStackFrame(Picoc *pc);
-int HeapPopStackFrame(Picoc *pc);
-void *HeapAllocMem(Picoc *pc, int Size);
-void HeapFreeMem(Picoc *pc, void *Mem);
+void HeapInit(Engine *pc, int StackSize);
+void HeapCleanup(Engine *pc);
+void *HeapAllocStack(Engine *pc, int Size);
+int HeapPopStack(Engine *pc, void *Addr, int Size);
+void HeapUnpopStack(Engine *pc, int Size);
+void HeapPushStackFrame(Engine *pc);
+int HeapPopStackFrame(Engine *pc);
+void *HeapAllocMem(Engine *pc, int Size);
+void HeapFreeMem(Engine *pc, void *Mem);

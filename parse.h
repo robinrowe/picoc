@@ -1,17 +1,17 @@
 /* parse.h */
 /* the following are defined in engine.h:
- * void PicocParse(const char *FileName, const char *Source, int SourceLen, int RunIt, int CleanupNow, int CleanupSource);
- * void PicocParseInteractive(); */
+ * void EngineParse(const char *FileName, const char *Source, int SourceLen, int RunIt, int CleanupNow, int CleanupSource);
+ * void EngineParseInteractive(); */
 
  #ifndef parse_h
  #define parse_h
 
-typedef struct Picoc Picoc;
+typedef struct Engine Engine;
 typedef FILE IOFILE;
  
 /* parser state - has all this detail so we can parse nested files */
 struct ParseState {
-    struct Picoc *pc;                  /* the itrapc instance this parser is a part of */
+    struct Engine *pc;                  /* the itrapc instance this parser is a part of */
     const unsigned char *Pos;   /* the character position in the source text */
     char *FileName;             /* what file we're executing (registered string) */
     short int Line;             /* line number we're executing */
@@ -28,12 +28,12 @@ struct ParseState {
                       hey go out of scope) */
 };
 
-void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger);
+void EngineParseInteractiveNoStartPrompt(Engine *pc, int EnableDebugger);
 enum ParseResult ParseStatement(struct ParseState *Parser,
     int CheckTrailingSemicolon);
 struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     struct ValueType *ReturnType, char *Identifier,struct ValueType *this_type);
-void ParseCleanup(Picoc *pc);
+void ParseCleanup(Engine *pc);
 void ParserCopyPos(struct ParseState *To, struct ParseState *From);
 void ParserCopy(struct ParseState *To, struct ParseState *From);
 struct Value *ParseMemberFunctionDefinition(struct ParseState *Parser,

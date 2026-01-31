@@ -189,7 +189,7 @@ struct LibraryFunction MathFunctions[] =
 };
 
 /* creates various system-dependent definitions */
-void MathSetupFunc(Picoc *pc)
+void MathSetupFunc(Engine *pc)
 {
     VariableDefinePlatformVar(pc, NULL, "M_E", &pc->FPType,
         (union AnyValue*)&M_EValue, false);

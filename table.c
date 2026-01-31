@@ -10,12 +10,12 @@
 #define VERBOSE
 
 /* initialize the shared string system */
-void TableInit(Picoc *pc)
+void TableInit(Engine *pc)
 {
     TableInitTable(&pc->StringTable, &pc->StringHashTable[0],
             STRING_TABLE_SIZE, true);
     pc->StrEmpty = TableStrRegister(pc, "",0);
-    /* Initialize VarTypeMap hash table to NULL, not really necessary as Picoc memset everything to zero */
+    /* Initialize VarTypeMap hash table to NULL, not really necessary as Engine memset everything to zero */
     memset(pc->VarTypeMap.HashTable, 0, sizeof(pc->VarTypeMap.HashTable));
 }
 
@@ -64,7 +64,7 @@ struct TableEntry *TableSearch(struct Table *Tbl, const char *Key,
 
 /* set an identifier to a value. returns FALSE if it already exists.
  * Key must be a shared string from TableStrRegister() */
-int TableSet(Picoc *pc, struct Table *Tbl, char *Key, struct Value *Val,
+int TableSet(Engine *pc, struct Table *Tbl, char *Key, struct Value *Val,
     const char *DeclFileName, int DeclLine, int DeclColumn)
 {
     int AddAt;
@@ -135,7 +135,7 @@ int TableGet(struct Table *Tbl, const char *Key, struct Value **Val,
 }
 #endif
 /* remove an entry from the table */
-struct Value *TableDelete(Picoc *pc, struct Table *Tbl, const char *Key)
+struct Value *TableDelete(Engine *pc, struct Table *Tbl, const char *Key)
 {
     /* shared strings have unique addresses so we don't need to hash them */
     uintptr_t HashValue = ((uintptr_t)Key) % Tbl->Size;
@@ -183,7 +183,7 @@ struct TableEntry *TableSearchIdentifier(struct Table *Tbl,
 }
 
 /* set an identifier and return the identifier. share if possible */
-char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
+char *TableSetIdentifier(Engine *pc, struct Table *Tbl, const char *Ident,
     int IdentLen)
 {   int AddAt;
     struct TableEntry *FoundEntry = TableSearchIdentifier(Tbl, Ident, IdentLen,&AddAt);
@@ -212,7 +212,7 @@ char *TableSetIdentifier(Picoc *pc, struct Table *Tbl, const char *Ident,
 }
 
 /* register a string in the shared string store */
-char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
+char *TableStrRegister(Engine *pc, const char *Str, size_t Len)
 { 
 #ifdef MAGIC2
     if(!memcmp(Str,"Foo.fooMethod",13) || !memcmp(Str,"fooFunction",11))
@@ -223,7 +223,7 @@ char *TableStrRegister(Picoc *pc, const char *Str, size_t Len)
     return TableSetIdentifier(pc, &pc->StringTable, Str, Len);
 }
 
-char *TableMemberFunctionRegister(Picoc *pc, const char *Str)
+char *TableMemberFunctionRegister(Engine *pc, const char *Str)
 {    size_t Len = strlen(Str);
     assert(0);
 #ifdef MAGIC
@@ -235,7 +235,7 @@ char *TableMemberFunctionRegister(Picoc *pc, const char *Str)
 }
 
 /* free all the strings */
-void TableStrFree(Picoc *pc)
+void TableStrFree(Engine *pc)
 {
     int Count;
     struct TableEntry *Entry;
@@ -251,12 +251,12 @@ void TableStrFree(Picoc *pc)
 }
 
 /* Store: variable name -> type name */
-void StoreVarType(Picoc *pc, const char *VarName, const char *TypeName)
+void StoreVarType(Engine *pc, const char *VarName, const char *TypeName)
 {
     int hash = TableHash(VarName, strlen(VarName)) % VARIABLE_TYPE_TABLE_SIZE;
     struct TypeNameEntry *entry = HeapAllocMem(pc, sizeof(struct TypeNameEntry));
     if (entry == NULL)
-        ProgramFail(pc,"StoreVarType out of memory");
+        ProgramFailNoParser(pc,"StoreVarType out of memory");
     entry->VarName = VarName;
     entry->TypeName = TypeName;
     entry->Next = pc->VarTypeMap.HashTable[hash];
@@ -264,7 +264,7 @@ void StoreVarType(Picoc *pc, const char *VarName, const char *TypeName)
 }
 
 /* Lookup: variable name -> type name */
-const char* LookupVarType(Picoc *pc, const char *VarName)
+const char* LookupVarType(Engine *pc, const char *VarName)
 {
     int hash = TableHash(VarName, strlen(VarName)) % VARIABLE_TYPE_TABLE_SIZE;
     for (struct TypeNameEntry *e = pc->VarTypeMap.HashTable[hash]; e != NULL; e = e->Next) 
@@ -275,7 +275,7 @@ const char* LookupVarType(Picoc *pc, const char *VarName)
     return NULL;
 }
 
-void VarTypeMapCleanup(Picoc *pc)
+void VarTypeMapCleanup(Engine *pc)
 {
     for (int i = 0; i < VARIABLE_TYPE_TABLE_SIZE; i++) 
     {

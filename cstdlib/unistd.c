@@ -591,7 +591,7 @@ struct LibraryFunction UnistdFunctions[] =
 /* creates various system-dependent definitions */
 extern const char *optarg;
 extern int optind, opterr, optopt;
-void UnistdSetupFunc(Picoc *pc)
+void UnistdSetupFunc(Engine *pc)
 {
     /* define NULL */
     if (!VariableDefined(pc, TableStrRegister(pc, "NULL")))

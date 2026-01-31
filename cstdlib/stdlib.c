@@ -189,7 +189,7 @@ struct LibraryFunction StdlibFunctions[] =
 };
 
 /* creates various system-dependent definitions */
-void StdlibSetupFunc(Picoc *pc)
+void StdlibSetupFunc(Engine *pc)
 {
     /* define NULL, TRUE and FALSE */
     if (!VariableDefined(pc, TableStrRegister(pc, "NULL")))

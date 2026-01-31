@@ -9,12 +9,11 @@ heap.h
 include.h
 lex.h
 parse.h
-engine.h
+itrapc.h
 platform.h
 table.h
 type.h
 variable.h
-engine.h
 platform.h
 clibrary.c
 debug.c
@@ -23,7 +22,6 @@ heap.c
 include.c
 lex.c
 parse.c
-engine.c
 platform.c
 table.c
 type.c

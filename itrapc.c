@@ -9,7 +9,7 @@
 
 /* include only engine.h here - should be able to use it with only the
     external interfaces, no internals from interpreter.h */
-#include "engine.h"
+#include "itrapc.h"
 
 
 #if defined(UNIX_HOST) || defined(WIN32)
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     int ParamCount = 1;
     int DontRunMain = false;
     int StackSize = getenv("STACKSIZE") ? atoi(getenv("STACKSIZE")) : PICOC_STACK_SIZE;
-    Picoc pc;
+    Engine pc;
 
     if (argc < 2 || strcmp(argv[ParamCount], "-h") == 0) {
         printf(PROGRAM_VERSION "  \n"
@@ -41,30 +41,30 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    PicocInitialize(&pc, StackSize);
+    EngineInitialize(&pc, StackSize);
 
     if (strcmp(argv[ParamCount], "-s") == 0) {
         DontRunMain = true;
-        PicocIncludeAllSystemHeaders(&pc);
+        EngineIncludeAllSystemHeaders(&pc);
         ParamCount++;
     }
 
     if (argc > ParamCount && strcmp(argv[ParamCount], "-i") == 0) {
-        PicocIncludeAllSystemHeaders(&pc);
-        PicocParseInteractive(&pc);
+        EngineIncludeAllSystemHeaders(&pc);
+        EngineParseInteractive(&pc);
     } else {
-        if (PicocPlatformSetExitPoint(&pc)) {
-            PicocCleanup(&pc);
-            return pc.PicocExitValue;
+        if (EnginePlatformSetExitPoint(&pc)) {
+            EngineCleanup(&pc);
+            return pc.EngineExitValue;
         }
 
         for (; ParamCount < argc && strcmp(argv[ParamCount], "-") != 0; ParamCount++)
-            PicocPlatformScanFile(&pc, argv[ParamCount]);
+            EnginePlatformScanFile(&pc, argv[ParamCount]);
 
         if (!DontRunMain)
-            PicocCallMain(&pc, argc - ParamCount, &argv[ParamCount]);
+            EngineCallMain(&pc, argc - ParamCount, &argv[ParamCount]);
     }
-    PicocCleanup(&pc);
-    return pc.PicocExitValue;
+    EngineCleanup(&pc);
+    return pc.EngineExitValue;
 }
 #endif

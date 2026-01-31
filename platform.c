@@ -1,7 +1,6 @@
 /* itrapc interface to the underlying platform. most platform-specific code
  * is in platform/platform_XX.c and platform/library_XX.c */
 
-#include "engine.h"
 #include "interpreter.h"
 #include "platform.h"
 #include "table.h"
@@ -17,7 +16,7 @@ static int gEnableDebugger = false;
 
 
 /* initialize everything */
-void PicocInitialize(Picoc *pc, int StackSize)
+void EngineInitialize(Engine *pc, int StackSize)
 {
     memset(pc, '\0', sizeof(*pc));
     PlatformInit(pc);
@@ -36,7 +35,7 @@ void PicocInitialize(Picoc *pc, int StackSize)
 }
 
 /* free memory */
-void PicocCleanup(Picoc *pc)
+void EngineCleanup(Engine *pc)
 {
 #ifdef DEBUGGER
     DebugCleanup(pc);
@@ -60,7 +59,7 @@ void PicocCleanup(Picoc *pc)
 #define CALL_MAIN_NO_ARGS_RETURN_INT "__exit_value = main();"
 #define CALL_MAIN_WITH_ARGS_RETURN_INT "__exit_value = main(__argc,__argv);"
 
-void PicocCallMain(Picoc *pc, int argc, char **argv)
+void EngineCallMain(Engine *pc, int argc, char **argv)
 {
     /* check if the program wants arguments */
     struct Value *FuncValue = NULL;
@@ -82,23 +81,23 @@ void PicocCallMain(Picoc *pc, int argc, char **argv)
 
     if (FuncValue->Val->FuncDef.ReturnType == &pc->VoidType) {
         if (FuncValue->Val->FuncDef.NumParams == 0)
-            PicocParse(pc, "startup", CALL_MAIN_NO_ARGS_RETURN_VOID,
+            EngineParse(pc, "startup", CALL_MAIN_NO_ARGS_RETURN_VOID,
                 strlen(CALL_MAIN_NO_ARGS_RETURN_VOID), true, true, false,
                 gEnableDebugger);
         else
-            PicocParse(pc, "startup", CALL_MAIN_WITH_ARGS_RETURN_VOID,
+            EngineParse(pc, "startup", CALL_MAIN_WITH_ARGS_RETURN_VOID,
                 strlen(CALL_MAIN_WITH_ARGS_RETURN_VOID), true, true, false,
                 gEnableDebugger);
     } else {
         VariableDefinePlatformVar(pc, NULL, "__exit_value", &pc->IntType,
-            (union AnyValue *)&pc->PicocExitValue, true);
+            (union AnyValue *)&pc->EngineExitValue, true);
 
         if (FuncValue->Val->FuncDef.NumParams == 0)
-            PicocParse(pc, "startup", CALL_MAIN_NO_ARGS_RETURN_INT,
+            EngineParse(pc, "startup", CALL_MAIN_NO_ARGS_RETURN_INT,
                 strlen(CALL_MAIN_NO_ARGS_RETURN_INT), true, true, false,
                 gEnableDebugger);
         else
-            PicocParse(pc, "startup", CALL_MAIN_WITH_ARGS_RETURN_INT,
+            EngineParse(pc, "startup", CALL_MAIN_WITH_ARGS_RETURN_INT,
                 strlen(CALL_MAIN_WITH_ARGS_RETURN_INT), true, true, false,
                 gEnableDebugger);
     }
@@ -160,7 +159,7 @@ void ProgramFail(struct ParseState *Parser, const char *Message, ...)
 }
 
 /* exit with a message, when we're not parsing a program */
-void ProgramFailNoParser(Picoc *pc, const char *Message, ...)
+void ProgramFailNoParser(Engine *pc, const char *Message, ...)
 {
     va_list Args;
 
@@ -196,7 +195,7 @@ void AssignFail(struct ParseState *Parser, const char *Format,
 }
 
 /* exit lexing with a message */
-void LexFail(Picoc *pc, struct LexState *Lexer, const char *Message, ...)
+void LexFail(Engine *pc, struct LexState *Lexer, const char *Message, ...)
 {
     va_list Args;
 
@@ -259,7 +258,7 @@ void PlatformVPrintf(IOFILE *Stream, const char *Format, va_list Args)
 /* make a new temporary name. takes a static buffer of char [7] as a parameter.
  * should be initialized to "XX0000"
  * where XX can be any characters */
-char *PlatformMakeTempName(Picoc *pc, char *TempNameBuffer)
+char *PlatformMakeTempName(Engine *pc, char *TempNameBuffer)
 {
     int CPos = 5;
 

@@ -226,7 +226,7 @@ struct LibraryFunction StringFunctions[] =
 };
 
 /* creates various system-dependent definitions */
-void StringSetupFunc(Picoc *pc)
+void StringSetupFunc(Engine *pc)
 {
     /* define NULL */
     if (!VariableDefined(pc, TableStrRegister(pc, "NULL")))

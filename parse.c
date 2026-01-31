@@ -1,11 +1,11 @@
 /* itrapc parser - parses source and executes statements */
-#include "engine.h"
 #include "interpreter.h"
 #include "variable.h"
 #include "table.h"
 #include "lex.h"
 #include "type.h"
 #include "heap.h"
+#include "platform.h"
 
 //#define VERBOSE
 //#define MAGIC
@@ -33,7 +33,7 @@ static int gEnableDebugger = false;
 
 
 /* deallocate any memory */
-void ParseCleanup(Picoc *pc)
+void ParseCleanup(Engine *pc)
 {
     while (pc->CleanupTokenList != NULL) {
         struct CleanupTokenNode *Next = pc->CleanupTokenList->Next;
@@ -93,7 +93,7 @@ struct Value *ParseFunctionDefinition(struct ParseState *Parser,
     struct Value *FuncValue;
     struct Value *OldFuncValue;
     struct ParseState FuncBody;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 #ifdef MAGIC
     printf("MAGIC: ParseFunctionDefinition adding '%s'\n", Identifier);
 #endif
@@ -252,7 +252,7 @@ int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,
 {
     int ArrayIndex = 0;
     enum LexToken Token;
-    struct Value *CValue;
+    struct Value *CValue = 0;
 
     /* count the number of elements in the array */
     if (DoAssignment && Parser->Mode == RunModeRun) {
@@ -375,7 +375,7 @@ int ParseArrayInitializer(struct ParseState *Parser, struct Value *NewVariable,
 void ParseDeclarationAssignment(struct ParseState *Parser,
     struct Value *NewVariable, int DoAssignment)
 {
-    struct Value *CValue;
+    struct Value *CValue = 0;
 
     if (LexGetToken(Parser, NULL, false) == TokenLeftBrace) {
         /* this is an array initializer */
@@ -404,7 +404,7 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
     struct ValueType *BasicType;
     struct ValueType *Typ;
     struct Value *NewVariable = NULL;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     TypeParseFront(Parser, &BasicType, &IsStatic);
     do {
@@ -463,7 +463,7 @@ int ParseDeclaration(struct ParseState *Parser, enum LexToken Token)
     struct ValueType *BasicType;
     struct ValueType *Typ;
     struct Value *NewVariable = NULL;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     TypeParseFront(Parser, &BasicType, &IsStatic);
     do {
@@ -717,9 +717,9 @@ enum ParseResult ParseStatement(struct ParseState *Parser,
 {
     int Condition;
     enum LexToken Token;
-    struct Value *CValue;
-    struct Value *LexerValue;
-    struct Value *VarValue;
+    struct Value *CValue = 0;
+    struct Value *LexerValue = 0;
+    struct Value *VarValue = 0;
     struct ParseState PreState;
 
 #ifdef DEBUGGER
@@ -988,14 +988,14 @@ enum ParseResult ParseStatement(struct ParseState *Parser,
 }
 
 /* quick scan a source file for definitions */
-void PicocParse(Picoc *pc, const char *FileName, const char *Source,
+void EngineParse(Engine *pc, const char *FileName, const char *Source,
     int SourceLen, int RunIt, int CleanupNow, int CleanupSource,
     int EnableDebugger)
 {
     char *RegFileName = TableStrRegister(pc, FileName,strlen(FileName));
     enum ParseResult Ok;
     struct ParseState Parser;
-    struct CleanupTokenNode *NewCleanupNode;
+    struct CleanupTokenNode *NewCleanupNode = 0;
 
     void *Tokens = LexAnalyse(pc, RegFileName, Source, SourceLen, NULL);
 
@@ -1003,7 +1003,7 @@ void PicocParse(Picoc *pc, const char *FileName, const char *Source,
     if (!CleanupNow) {
         NewCleanupNode = HeapAllocMem(pc, sizeof(struct CleanupTokenNode));
         if (NewCleanupNode == NULL)
-            ProgramFailNoParser(pc, "(PicocParse) out of memory");
+            ProgramFailNoParser(pc, "(EngineParse) out of memory");
 
         NewCleanupNode->Tokens = Tokens;
         if (CleanupSource)
@@ -1032,13 +1032,13 @@ void PicocParse(Picoc *pc, const char *FileName, const char *Source,
 }
 
 /* parse interactively */
-void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger)
+void EngineParseInteractiveNoStartPrompt(Engine *pc, int EnableDebugger)
 {
     enum ParseResult Ok;
     struct ParseState Parser;
 
     LexInitParser(&Parser, pc, NULL, NULL, pc->StrEmpty, true, EnableDebugger);
-    PicocPlatformSetExitPoint(pc);
+    EnginePlatformSetExitPoint(pc);
     LexInteractiveClear(pc, &Parser);
 
     do {
@@ -1055,9 +1055,9 @@ void PicocParseInteractiveNoStartPrompt(Picoc *pc, int EnableDebugger)
 }
 
 /* parse interactively, showing a startup message */
-void PicocParseInteractive(Picoc *pc)
+void EngineParseInteractive(Engine *pc)
 {
     PlatformPrintf(pc->CStdOut, INTERACTIVE_PROMPT_START);
-    PicocParseInteractiveNoStartPrompt(pc, gEnableDebugger);
+    EngineParseInteractiveNoStartPrompt(pc, gEnableDebugger);
 }
 

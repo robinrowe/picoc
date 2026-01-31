@@ -326,7 +326,7 @@ static int EXDEVValue = EXDEV;
 
 
 /* creates various system-dependent definitions */
-void StdErrnoSetupFunc(Picoc *pc)
+void StdErrnoSetupFunc(Engine *pc)
 {
     /* defines */
 #ifdef EACCES

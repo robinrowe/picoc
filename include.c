@@ -1,14 +1,13 @@
 /* itrapc include system - can emulate system includes from built-in libraries
  * or it can include and parse files if the system has files */
 
-#include "engine.h"
 #include "interpreter.h"
 #include "include.h"
 #include "table.h"
 #include "heap.h"
 
 /* initialize the built-in include libraries */
-void IncludeInit(Picoc *pc)
+void IncludeInit(Engine *pc)
 {
     IncludeRegister(pc, "ctype.h", NULL, &StdCtypeFunctions[0], NULL);
     IncludeRegister(pc, "errno.h", &StdErrnoSetupFunc, NULL, NULL);
@@ -26,7 +25,7 @@ void IncludeInit(Picoc *pc)
 }
 
 /* clean up space used by the include system */
-void IncludeCleanup(Picoc *pc)
+void IncludeCleanup(Engine *pc)
 {
     struct IncludeLibrary *ThisInclude = pc->IncludeLibList;
     struct IncludeLibrary *NextInclude;
@@ -41,8 +40,8 @@ void IncludeCleanup(Picoc *pc)
 }
 
 /* register a new build-in include file */
-void IncludeRegister(Picoc *pc, const char *IncludeName,
-    void (*SetupFunction)(Picoc *pc), struct LibraryFunction *FuncList,
+void IncludeRegister(Engine *pc, const char *IncludeName,
+    void (*SetupFunction)(Engine *pc), struct LibraryFunction *FuncList,
     const char *SetupCSource)
 {
     struct IncludeLibrary *NewLib = HeapAllocMem(pc, sizeof(struct IncludeLibrary));
@@ -55,7 +54,7 @@ void IncludeRegister(Picoc *pc, const char *IncludeName,
 }
 
 /* include all of the system headers */
-void PicocIncludeAllSystemHeaders(Picoc *pc)
+void EngineIncludeAllSystemHeaders(Engine *pc)
 {
     struct IncludeLibrary *ThisInclude = pc->IncludeLibList;
 
@@ -64,7 +63,7 @@ void PicocIncludeAllSystemHeaders(Picoc *pc)
 }
 
 /* include one of a number of predefined libraries, or perhaps an actual file */
-void IncludeFile(Picoc *pc, char *FileName)
+void IncludeFile(Engine *pc, char *FileName)
 {
     struct IncludeLibrary *LInclude;
 
@@ -83,7 +82,7 @@ void IncludeFile(Picoc *pc, char *FileName)
 
                 /* parse the setup C source code - may define types etc. */
                 if (LInclude->SetupCSource != NULL)
-                    PicocParse(pc, FileName, LInclude->SetupCSource,
+                    EngineParse(pc, FileName, LInclude->SetupCSource,
                         strlen(LInclude->SetupCSource), true, true, false, false);
 
                 /* set up the library functions */
@@ -96,6 +95,6 @@ void IncludeFile(Picoc *pc, char *FileName)
     }
 
     /* not a predefined file, read a real file */
-    PicocPlatformScanFile(pc, FileName);
+    EnginePlatformScanFile(pc, FileName);
 }
 

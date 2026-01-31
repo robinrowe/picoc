@@ -1,10 +1,10 @@
 
 /* clibrary.h */
-void BasicIOInit(Picoc *pc);
-void LibraryInit(Picoc *pc);
-void LibraryAdd(Picoc *pc, struct LibraryFunction *FuncList);
+void BasicIOInit(Engine *pc);
+void LibraryInit(Engine *pc);
+void LibraryAdd(Engine *pc, struct LibraryFunction *FuncList);
 #if 0
-void CLibraryInit(Picoc *pc);
+void CLibraryInit(Engine *pc);
 void PrintCh(char OutCh, IOFILE *Stream);
 void PrintSimpleInt(long Num, IOFILE *Stream);
 void PrintInt(long Num, int FieldWidth, int ZeroPad, int LeftJustify,

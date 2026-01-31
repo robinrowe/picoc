@@ -2,19 +2,19 @@
 
 
 /* include.h */
-void IncludeInit(Picoc *pc);
-void IncludeCleanup(Picoc *pc);
-void IncludeRegister(Picoc *pc, const char *IncludeName,
-    void (*SetupFunction)(Picoc *pc), struct LibraryFunction *FuncList,
+void IncludeInit(Engine *pc);
+void IncludeCleanup(Engine *pc);
+void IncludeRegister(Engine *pc, const char *IncludeName,
+    void (*SetupFunction)(Engine *pc), struct LibraryFunction *FuncList,
     const char *SetupCSource);
-void IncludeFile(Picoc *pc, char *Filename);
+void IncludeFile(Engine *pc, char *Filename);
 /* the following is defined in engine.h:
- * void PicocIncludeAllSystemHeaders(); */
+ * void EngineIncludeAllSystemHeaders(); */
 
 #ifdef DEBUGGER
 /* debug.c */
-void DebugInit(Picoc *pc);
-void DebugCleanup(Picoc *pc);
+void DebugInit(Engine *pc);
+void DebugCleanup(Engine *pc);
 void DebugCheckStatement(struct ParseState *Parser);
 void DebugSetBreakpoint(struct ParseState *Parser);
 int DebugClearBreakpoint(struct ParseState *Parser);
@@ -24,36 +24,36 @@ void DebugStep(void)
 /* stdio.c */
 const char StdioDefs[];
 struct LibraryFunction StdioFunctions[];
-void StdioSetupFunc(Picoc *pc);
+void StdioSetupFunc(Engine *pc);
 
 /* math.c */
 struct LibraryFunction MathFunctions[];
-void MathSetupFunc(Picoc *pc);
+void MathSetupFunc(Engine *pc);
 
 /* string.c */
 struct LibraryFunction StringFunctions[];
-void StringSetupFunc(Picoc *pc);
+void StringSetupFunc(Engine *pc);
 
 /* stdlib.c */
 struct LibraryFunction StdlibFunctions[];
-void StdlibSetupFunc(Picoc *pc);
+void StdlibSetupFunc(Engine *pc);
 
 /* time.c */
 const char StdTimeDefs[];
 struct LibraryFunction StdTimeFunctions[];
-void StdTimeSetupFunc(Picoc *pc);
+void StdTimeSetupFunc(Engine *pc);
 
 /* errno.c */
-void StdErrnoSetupFunc(Picoc *pc);
+void StdErrnoSetupFunc(Engine *pc);
 
 /* ctype.c */
 struct LibraryFunction StdCtypeFunctions[];
 
 /* stdbool.c */
 const char StdboolDefs[];
-void StdboolSetupFunc(Picoc *pc);
+void StdboolSetupFunc(Engine *pc);
 
 /* unistd.c */
 const char UnistdDefs[];
 struct LibraryFunction UnistdFunctions[];
-void UnistdSetupFunc(Picoc *pc);
+void UnistdSetupFunc(Engine *pc);

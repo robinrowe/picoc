@@ -5,7 +5,7 @@
 #include "interpreter.h"
 
 #ifdef DEBUG_HEAP
-void ShowBigList(Picoc *pc)
+void ShowBigList(Engine *pc)
 {
     struct AllocNode *LPos;
 
@@ -19,7 +19,7 @@ void ShowBigList(Picoc *pc)
 #endif
 
 /* initialize the stack and heap storage */
-void HeapInit(Picoc *pc, int StackOrHeapSize)
+void HeapInit(Engine *pc, int StackOrHeapSize)
 {
     int Count;
     int AlignOffset = 0;
@@ -42,14 +42,14 @@ void HeapInit(Picoc *pc, int StackOrHeapSize)
         pc->FreeListBucket[Count] = NULL;
 }
 
-void HeapCleanup(Picoc *pc)
+void HeapCleanup(Engine *pc)
 {
     free(pc->HeapMemory);
 }
 
 /* allocate some space on the stack, in the current stack frame
  * clears memory. can return NULL if out of stack space */
-void *HeapAllocStack(Picoc *pc, int Size)
+void *HeapAllocStack(Engine *pc, int Size)
 {
     char *NewMem = pc->HeapStackTop;
     char *NewTop = (char*)pc->HeapStackTop + MEM_ALIGN(Size);
@@ -66,7 +66,7 @@ void *HeapAllocStack(Picoc *pc, int Size)
 }
 
 /* allocate some space on the stack, in the current stack frame */
-void HeapUnpopStack(Picoc *pc, int Size)
+void HeapUnpopStack(Engine *pc, int Size)
 {
 #ifdef DEBUG_HEAP
     printf("HeapUnpopStack(%ld) at 0x%lx\n", (unsigned long)MEM_ALIGN(Size),
@@ -76,7 +76,7 @@ void HeapUnpopStack(Picoc *pc, int Size)
 }
 
 /* free some space at the top of the stack */
-int HeapPopStack(Picoc *pc, void *Addr, int Size)
+int HeapPopStack(Engine *pc, void *Addr, int Size)
 {
     int ToLose = MEM_ALIGN(Size);
     if (ToLose > ((char*)pc->HeapStackTop - (char*)&(pc->HeapMemory)[0]))
@@ -93,7 +93,7 @@ int HeapPopStack(Picoc *pc, void *Addr, int Size)
 }
 
 /* push a new stack frame on to the stack */
-void HeapPushStackFrame(Picoc *pc)
+void HeapPushStackFrame(Engine *pc)
 {
 #ifdef DEBUG_HEAP
     printf("Adding stack frame at 0x%lx\n", (unsigned long)pc->HeapStackTop);
@@ -106,7 +106,7 @@ void HeapPushStackFrame(Picoc *pc)
 
 /* pop the current stack frame, freeing all memory in the
     frame. can return NULL */
-int HeapPopStackFrame(Picoc *pc)
+int HeapPopStackFrame(Engine *pc)
 {
     if (*(void**)pc->StackFrame != NULL) {
         pc->HeapStackTop = pc->StackFrame;
@@ -122,13 +122,13 @@ int HeapPopStackFrame(Picoc *pc)
 
 /* allocate some dynamically allocated memory. memory is cleared.
     can return NULL if out of memory */
-void *HeapAllocMem(Picoc *pc, int Size)
+void *HeapAllocMem(Engine *pc, int Size)
 {
     return calloc(Size, 1);
 }
 
 /* free some dynamically allocated memory */
-void HeapFreeMem(Picoc *pc, void *Mem)
+void HeapFreeMem(Engine *pc, void *Mem)
 {
     free(Mem);
 }

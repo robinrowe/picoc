@@ -1,4 +1,4 @@
-#include "../engine.h"
+#include "../itrapc.h"
 #include "../interpreter.h"
 
 #ifdef DEBUGGER
@@ -8,13 +8,13 @@ static int gEnableDebugger = false;
 #endif
 
 /* mark where to end the program for platforms which require this */
-jmp_buf PicocExitBuf;
+jmp_buf EngineExitBuf;
 
-void PlatformInit(Picoc *pc)
+void PlatformInit(Engine *pc)
 {
 }
 
-void PlatformCleanup(Picoc *pc)
+void PlatformCleanup(Engine *pc)
 {
 }
 
@@ -43,7 +43,7 @@ void PlatformPutc(unsigned char OutCh, union OutputStreamInfo *Stream)
 }
 
 /* read a file into memory */
-char *PlatformReadFile(Picoc *pc, const char *FileName)
+char *PlatformReadFile(Engine *pc, const char *FileName)
 {
     struct stat FileInfo;
     char *ReadText;
@@ -79,17 +79,17 @@ char *PlatformReadFile(Picoc *pc, const char *FileName)
 }
 
 /* read and scan a file for definitions */
-void PicocPlatformScanFile(Picoc *pc, const char *FileName)
+void EnginePlatformScanFile(Engine *pc, const char *FileName)
 {
     char *SourceStr = PlatformReadFile(pc, FileName);
-    PicocParse(pc, FileName, SourceStr, strlen(SourceStr), true, false, true,
+    EngineParse(pc, FileName, SourceStr, strlen(SourceStr), true, false, true,
         gEnableDebugger);
 }
 
 /* exit the program */
-void PlatformExit(Picoc *pc, int RetVal)
+void PlatformExit(Engine *pc, int RetVal)
 {
-    pc->PicocExitValue = RetVal;
-    longjmp(pc->PicocExitBuf, 1);
+    pc->EngineExitValue = RetVal;
+    longjmp(pc->EngineExitBuf, 1);
 //    fflush(stdout);
 }

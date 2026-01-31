@@ -297,14 +297,14 @@ Or you could just parse the structure directly:
 
 ```C
 const char *definition = "struct complex {int i; int j;};";
-PicocParse("my lib", definition, strlen(definition), true, false, false);
+EngineParse("my lib", definition, strlen(definition), true, false, false);
 ```
 
 The same method works for defining macros too:
 
 ```C
 const char *definition = "#define ABS(a) ((a) < (0) ? -(a) : (a))";
-PicocParse("my lib", definition, strlen(definition), true, false, false);
+EngineParse("my lib", definition, strlen(definition), true, false, false);
 ```
 
 Here's a more sophisticated method, using the internal functions of itrapc directly:

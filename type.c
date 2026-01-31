@@ -6,12 +6,12 @@
 #include "platform.h"
 #include "type.h"
 
-static struct ValueType *TypeAdd(Picoc *pc, struct ParseState *Parser,
+static struct ValueType *TypeAdd(Engine *pc, struct ParseState *Parser,
     struct ValueType *ParentType, enum BaseType Base, int ArraySize,
     const char *Identifier, int Sizeof, int AlignBytes);
-static void TypeAddBaseType(Picoc *pc, struct ValueType *TypeNode,
+static void TypeAddBaseType(Engine *pc, struct ValueType *TypeNode,
     enum BaseType Base, int Sizeof, int AlignBytes);
-static void TypeCleanupNode(Picoc *pc, struct ValueType *Typ);
+static void TypeCleanupNode(Engine *pc, struct ValueType *Typ);
 static void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     int IsStruct);
 static void TypeParseEnum(struct ParseState *Parser, struct ValueType **Typ);
@@ -26,7 +26,7 @@ static int IntAlignBytes;
 
 
 /* add a new type to the set of types we know about */
-struct ValueType *TypeAdd(Picoc *pc, struct ParseState *Parser,
+struct ValueType *TypeAdd(Engine *pc, struct ParseState *Parser,
     struct ValueType *ParentType, enum BaseType Base, int ArraySize,
     const char *Identifier, int Sizeof, int AlignBytes)
 {
@@ -53,7 +53,7 @@ struct ValueType *TypeAdd(Picoc *pc, struct ParseState *Parser,
 
 /* given a parent type, get a matching derived type and make one if necessary.
  * Identifier should be registered with the shared string table. */
-struct ValueType *TypeGetMatching(Picoc *pc, struct ParseState *Parser,
+struct ValueType *TypeGetMatching(Engine *pc, struct ParseState *Parser,
     struct ValueType *ParentType, enum BaseType Base, int ArraySize,
     const char *Identifier, int AllowDuplicates)
 {
@@ -126,7 +126,7 @@ int TypeSize(struct ValueType *Typ, int ArraySize, int Compact)
 }
 
 /* add a base type */
-void TypeAddBaseType(Picoc *pc, struct ValueType *TypeNode, enum BaseType Base,
+void TypeAddBaseType(Engine *pc, struct ValueType *TypeNode, enum BaseType Base,
             int Sizeof, int AlignBytes)
 {
     TypeNode->Base = Base;
@@ -147,7 +147,7 @@ void TypeAddBaseType(Picoc *pc, struct ValueType *TypeNode, enum BaseType Base,
 }
 
 /* initialize the type system */
-void TypeInit(Picoc *pc)
+void TypeInit(Engine *pc)
 {
     struct IntAlign {char x; int y;} ia;
     struct ShortAlign {char x; short y;} sa;
@@ -195,7 +195,7 @@ void TypeInit(Picoc *pc)
 }
 
 /* deallocate heap-allocated types */
-void TypeCleanupNode(Picoc *pc, struct ValueType *Typ)
+void TypeCleanupNode(Engine *pc, struct ValueType *Typ)
 {
     struct ValueType *SubType;
     struct ValueType *NextSubType;
@@ -226,7 +226,7 @@ void TypeCleanupNode(Picoc *pc, struct ValueType *Typ)
     }
 }
 
-void TypeCleanup(Picoc *pc)
+void TypeCleanup(Engine *pc)
 {
     TypeCleanupNode(pc, &pc->UberType);
 }
@@ -239,10 +239,10 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
     char *StructIdentifier;
     enum LexToken Token;
     int AlignBoundary;
-    struct Value *MemberValue;
-    Picoc *pc = Parser->pc;
-    struct Value *LexValue;
-    struct ValueType *MemberType;
+    struct Value *MemberValue = 0;
+    Engine *pc = Parser->pc;
+    struct Value *LexValue = 0;
+    struct ValueType *MemberType = 0;
 #ifdef VERBOSE
     printf("DEBUG: TypeParseStruct called for struct (TopStackFrame=%p)\n", (void*)pc->TopStackFrame);
 #endif
@@ -340,7 +340,7 @@ void TypeParseStruct(struct ParseState *Parser, struct ValueType **Typ,
 }
 
 /* create a system struct which has no user-visible members */
-struct ValueType *TypeCreateOpaqueStruct(Picoc *pc, struct ParseState *Parser,
+struct ValueType *TypeCreateOpaqueStruct(Engine *pc, struct ParseState *Parser,
     const char *Identifier, int Size)
 {
     struct ValueType *Typ = TypeGetMatching(pc, Parser, &pc->UberType,
@@ -368,7 +368,7 @@ void TypeParseEnum(struct ParseState *Parser, struct ValueType **Typ)
     enum LexToken Token;
     struct Value *LexValue;
     struct Value InitValue;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     Token = LexGetToken(Parser, &LexValue, false);
     if (Token == TokenIdentifier) {
@@ -427,9 +427,9 @@ int TypeParseFront(struct ParseState *Parser, struct ValueType **Typ,
     int StaticQualifier = false;
     enum LexToken Token;
     struct ParseState Before;
-    struct Value *LexerValue;
-    struct Value *VarValue;
-    Picoc *pc = Parser->pc;
+    struct Value *LexerValue = 0;
+    struct Value *VarValue = 0;
+    Engine *pc = Parser->pc;
     *Typ = NULL;
 
     /* ignore leading type qualifiers */

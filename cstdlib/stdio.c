@@ -46,7 +46,7 @@ struct StdVararg
 };
 
 /* initializes the I/O system so error reporting works */
-void BasicIOInit(Picoc *pc)
+void BasicIOInit(Engine *pc)
 {
     pc->CStdOut = stdout;
     stdinValue = stdin;
@@ -123,7 +123,7 @@ void StdioFprintfWord(StdOutStream *Stream, const char *Format, unsigned int Val
 /* printf-style format of a long */
 void StdioFprintfLong(StdOutStream *Stream, const char *Format, uint64_t Value) {
     char PlatformFormat[MAX_FORMAT+1], *FPos = PlatformFormat;
-
+    PlatformFormat[0] = 0;
     while (*Format) {
         char *UseFormat = NULL;
 
@@ -237,7 +237,7 @@ int StdioBasePrintf(struct ParseState *Parser, FILE *Stream, char *StrOut,
 	int ShowLong = 0;
     struct ValueType *ShowType;
     StdOutStream SOStream;
-    Picoc *pc = Parser->pc;
+    Engine *pc = Parser->pc;
 
     if (Format == NULL)
         Format = "[null format]\n";
@@ -434,7 +434,7 @@ int StdioBaseScanf(struct ParseState *Parser, FILE *Stream, char *StrIn,
     struct Value *ThisArg = Args->Param[0];
     int ArgCount = 0;
     void *ScanfArg[MAX_SCANF_ARGS];
-
+    ScanfArg[0] = 0;
     if (Args->NumArgs > MAX_SCANF_ARGS)
         ProgramFail(Parser, "too many arguments to scanf() - %d max",
          MAX_SCANF_ARGS);
@@ -864,7 +864,7 @@ struct LibraryFunction StdioFunctions[] =
 };
 
 /* creates various system-dependent definitions */
-void StdioSetupFunc(Picoc *pc)
+void StdioSetupFunc(Engine *pc)
 {
     struct ValueType *StructFileType;
     struct ValueType *FilePtrType;

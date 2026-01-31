@@ -14,6 +14,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include "parse.h"
+#include "itrapc.h"
 
 /* host platform includes */
 #ifdef UNIX_HOST
@@ -89,27 +90,27 @@ extern jmp_buf ExitBuf;
 
 /* platform.h */
 /* the following are defined in engine.h:
- * void PicocCallMain(int argc, char **argv);
- * int PicocPlatformSetExitPoint();
- * void PicocInitialize(int StackSize);
- * void PicocCleanup();
- * void PicocPlatformScanFile(const char *FileName);
- * int PicocExitValue; */
+ * void EngineCallMain(int argc, char **argv);
+ * int EnginePlatformSetExitPoint();
+ * void EngineInitialize(int StackSize);
+ * void EngineCleanup();
+ * void EnginePlatformScanFile(const char *FileName);
+ * int EngineExitValue; */
 void ProgramFail(struct ParseState *Parser, const char *Message, ...);
-void ProgramFailNoParser(Picoc *pc, const char *Message, ...);
+void ProgramFailNoParser(Engine *pc, const char *Message, ...);
 void AssignFail(struct ParseState *Parser, const char *Format,
     struct ValueType *Type1, struct ValueType *Type2, int Num1, int Num2,
     const char *FuncName, int ParamNo);
-void LexFail(Picoc *pc, struct LexState *Lexer, const char *Message, ...);
-void PlatformInit(Picoc *pc);
-void PlatformCleanup(Picoc *pc);
+void LexFail(Engine *pc, struct LexState *Lexer, const char *Message, ...);
+void PlatformInit(Engine *pc);
+void PlatformCleanup(Engine *pc);
 char *PlatformGetLine(char *Buf, int MaxLen, const char *Prompt);
 int PlatformGetCharacter();
 void PlatformPutc(unsigned char OutCh, union OutputStreamInfo *);
 void PlatformPrintf(IOFILE *Stream, const char *Format, ...);
 void PlatformVPrintf(IOFILE *Stream, const char *Format, va_list Args);
-void PlatformExit(Picoc *pc, int ExitVal);
-char *PlatformMakeTempName(Picoc *pc, char *TempNameBuffer);
-void PlatformLibraryInit(Picoc *pc);
+void PlatformExit(Engine *pc, int ExitVal);
+char *PlatformMakeTempName(Engine *pc, char *TempNameBuffer);
+void PlatformLibraryInit(Engine *pc);
 
 #endif /* PLATFORM_H */
