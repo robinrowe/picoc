@@ -1,6 +1,6 @@
-/* picoc lexer - converts source text into a tokenised form */
+/* itrapc lexer - converts source text into a tokenised form */
 
-#include "picoc.h"
+#include "engine.h"
 #include "interpreter.h"
 #include "table.h"
 #include "variable.h"

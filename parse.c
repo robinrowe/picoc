@@ -1,5 +1,5 @@
-/* picoc parser - parses source and executes statements */
-#include "picoc.h"
+/* itrapc parser - parses source and executes statements */
+#include "engine.h"
 #include "interpreter.h"
 #include "variable.h"
 #include "table.h"

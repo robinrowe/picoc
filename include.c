@@ -1,7 +1,7 @@
-/* picoc include system - can emulate system includes from built-in libraries
+/* itrapc include system - can emulate system includes from built-in libraries
  * or it can include and parse files if the system has files */
 
-#include "picoc.h"
+#include "engine.h"
 #include "interpreter.h"
 #include "include.h"
 #include "table.h"

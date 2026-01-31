@@ -1,4 +1,4 @@
-/* picoc expression evaluator - a stack-based expression evaluation system
+/* itrapc expression evaluator - a stack-based expression evaluation system
  * which handles operator precedence */
 #include <stdint.h>
 #include "interpreter.h"

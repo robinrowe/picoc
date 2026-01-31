@@ -1,6 +1,6 @@
-/* picoc main header file - this has all the main data structures and
- * function prototypes. If you're just calling picoc you should look at the
- * external interface instead, in picoc.h */
+/* itrapc main header file - this has all the main data structures and
+ * function prototypes. If you're just calling itrapc you should look at the
+ * external interface instead, in engine.h */
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
@@ -417,7 +417,7 @@ struct TypeNameTable
     struct TypeNameEntry *HashTable[VARIABLE_TYPE_TABLE_SIZE];
 };
 
-/* the entire state of the picoc system */
+/* the entire state of the itrapc system */
 struct Picoc {
     /* parser global data */
     struct Table GlobalTable;
@@ -491,7 +491,7 @@ struct Picoc {
     IOFILE *CStdOut;
     IOFILE CStdOutBase;
 
-    /* the picoc version string */
+    /* the itrapc version string */
     const char *VersionString;
 
     /* exit longjump buffer */

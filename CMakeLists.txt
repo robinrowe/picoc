@@ -1,4 +1,4 @@
-# PicoC/CMakeLists.txt
+# itrapc/CMakeLists.txt
 # Created by Robin Rowe 2024-04-09
 # License New BSD License
 
@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-project(PicoC)
+project(ITrapC)
 message("Configuring ${CMAKE_PROJECT_NAME}...")
 
 if(NOT WIN32 AND NOT APPLE)
@@ -46,5 +46,5 @@ add_subdirectory(./platform)
 #add_subdirectory(./tests/csmith)
 #add_subdirectory(./tests/jpoirier)
 file(STRINGS sources.cmake SOURCES)
-add_executable(picoc ${SOURCES})
-target_link_libraries(picoc cstdlib platform)
+add_executable(itrapc ${SOURCES})
+target_link_libraries(itrapc cstdlib platform)

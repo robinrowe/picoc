@@ -20,20 +20,20 @@ processors and is easy to port to new targets.
 You can run standard C programs straight from the command line:
 
 ```C
-$ picoc file.c
+$ itrapc file.c
 ```
 
 If your program is split into multiple files you can list them all on the
 command line.
 
 ```C
-$ picoc file1.c file2.c file3.c
+$ itrapc file1.c file2.c file3.c
 ```
 
 If your program takes arguments you add them after a '-' character.
 
 ```C
-$ picoc file.c - arg1 arg2
+$ itrapc file.c - arg1 arg2
 ```
 
 
@@ -45,7 +45,7 @@ in your file/s and B) scripts don't require a main() function; they have
 statements that are run directly from the top of a file to the bottom.
 
 ```C
-$ picoc -s file.c
+$ itrapc -s file.c
 ```
 
 Here's an example script:
@@ -66,7 +66,7 @@ printf("The total is %d\n", total);
 Here's the output from this script:
 
 ```C
-$ ./picoc -s script.c
+$ ./itrapc -s script.c
 Starting my script
 i = 0
 i = 1
@@ -85,18 +85,18 @@ The total is 45
 # Interactive mode
 
 ```C
-> picoc -i
+> itrapc -i
 ```
 
 Here's an example session:
 
 ```C
-$ ./picoc -i
-starting picoc v2.1
-picoc> char inbuf[80];
-picoc> gets(inbuf);
+$ ./itrapc -i
+starting itrapc v2.1
+itrapc> char inbuf[80];
+itrapc> gets(inbuf);
 hello!
-picoc> printf("I got: %s\n", inbuf);
+itrapc> printf("I got: %s\n", inbuf);
 I got: hello!
 ```
 
@@ -106,24 +106,24 @@ Sometimes in interactive mode you want to change a function or redeclare a
 variable. You can do this using the "delete" statement:
 
 ```C
-$ ./picoc -i
-starting picoc v2.1
-picoc> int fred = 1234;
-picoc> printf("fred = %d\n", fred);
+$ ./itrapc -i
+starting itrapc v2.1
+itrapc> int fred = 1234;
+itrapc> printf("fred = %d\n", fred);
 fred = 1234
-picoc> delete fred;
-picoc> char *fred = "hello";
-picoc> printf("fred = '%s'\n", fred);
+itrapc> delete fred;
+itrapc> char *fred = "hello";
+itrapc> printf("fred = '%s'\n", fred);
 fred = 'hello'
 ```
 
-Note, you can quit picoc's interactive mode using control-D.
+Note, you can quit itrapc interactive mode using control-D.
 
 
 # Environment variables
 
-In some cases you may want to change the picoc stack space. The default stack
-size is 512KB (see PICOC_STACK_SIZE in picoc.c) which should be large enough
+In some cases you may want to change the itrapc stack space. The default stack
+size is 512KB (see PICOC_STACK_SIZE in engine.c) which should be large enough
 for most programs.
 
 To change the stack size you can set the STACKSIZE environment variable to a
@@ -132,11 +132,8 @@ different value. The value is in bytes.
 
 # Compiling PicoC
 
-picoc can be compiled for a UNIX/Linux/POSIX host by typing "make".
+itrapc can be compiled for Linux and Windows using cmake.
 
-The test suite can be run by typing "make test".
-
-On Windows, use the MSVC++ sln file in the msvc/picoc folder.
 
 
 # Porting PicoC
@@ -156,7 +153,7 @@ printf() which are platform-independent.
 Porting the system will involve setting up suitable includes and defines
 in platform.h, writing some I/O routines in platform_XXX.c, putting
 whatever user functions you want in platform_library.c and then changing
-the main program in picoc.c to whatever you need to do to get programs
+the main program in engine.c to whatever you need to do to get programs
 into the system.
 
 platform.h is set to UNIX_HOST by default so tests can be easily run on
@@ -173,13 +170,13 @@ PicoC is published under the "New BSD License", see the LICENSE file.
 # Adding native C functions
 
 ## Introduction
-picoc allows you to define your own library functions. These functions are
+itrapc allows you to define your own library functions. These functions are
 written in C using your system's native C compiler. Since the native C compiler
-can access the hardware this means you can add functions which give picoc control
+can access the hardware this means you can add functions which give itrapc control
 of your hardware.
 
 ## How libraries work
-Your picoc distribution contains two files which are used to define library
+Your itrapc distribution contains two files which are used to define library
 functions for your system. If your system is called "foobar" you'll be using:
 
 * library_foobar.c - this is where the foobar-specific library functions go
@@ -187,11 +184,11 @@ functions for your system. If your system is called "foobar" you'll be using:
 
 We'll start by defining a simple function in library_foobar.c. We need to do two things:
 
-* add the function prototype to our list of picoc library functions
+* add the function prototype to our list of itrapc library functions
 * define the native C implementation of the function
 
 ## The prototype list
-Each of the library_XXX.c files defines a list of picoc prototypes for each of
+Each of the library_XXX.c files defines a list of itrapc prototypes for each of
 the functions it defines. For example:
 
 ```C
@@ -274,7 +271,7 @@ the 'int *' example above:
 char *CharPtr = (char*)Param[0]->Val->NativePointer;
 ```
 
-picoc strings work like C strings - they're pointers to arrays of characters,
+itrapc strings work like C strings - they're pointers to arrays of characters,
 terminated by a null character. Once you have the C char * you can use it just
 like a normal C string.
 
@@ -310,7 +307,7 @@ const char *definition = "#define ABS(a) ((a) < (0) ? -(a) : (a))";
 PicocParse("my lib", definition, strlen(definition), true, false, false);
 ```
 
-Here's a more sophisticated method, using the internal functions of picoc directly:
+Here's a more sophisticated method, using the internal functions of itrapc directly:
 
 ```C
 void PlatformLibraryInit()
@@ -345,7 +342,7 @@ Our prototype will look like:
 And finally we can define the library function:
 
 ```C
-struct complex {int i; int j;};  /* make this C declaration match the picoc one */
+struct complex {int i; int j;};  /* make this C declaration match the itrapc one */
 
 void ShowComplex(struct ParseState *Parser,
 				 struct Value *ReturnValue, struct Value **Param, int NumArgs)
@@ -395,9 +392,9 @@ Take a look at clibrary.c for the full definition of LibPrintf() if you need a
 more complete example.
 
 ## Sharing native values with PicoC
-Sometimes you have native variables you'd like to share with picoc. We can
-define a picoc value which shares memory with a native variable. Then we store
-this variable in the picoc symbol table so your programs can find it by name.
+Sometimes you have native variables you'd like to share with itrapc. We can
+define a itrapc value which shares memory with a native variable. Then we store
+this variable in the itrapc symbol table so your programs can find it by name.
 There's an easy way to do this:
 
 ```C
@@ -464,14 +461,14 @@ The old "K&R" form of function declaration is not supported.
 ## Predefined macros
 A few macros are pre-defined:
 
-* PROGRAM_VERSION - gives the picoc version as a string eg. "v2.1 beta r524"
+* PROGRAM_VERSION - gives the itrapc version as a string eg. "v2.1 beta r524"
 
 ## Function pointers
 Pointers to functions are currently not supported.
 
 ## Storage classes
 Many of the storage classes in C90 really only have meaning in a compiler so
-they're not implemented in picoc. This includes: static, extern, volatile,
+they're not implemented in itrapc. This includes: static, extern, volatile,
 register and auto. They're recognised but currently ignored.
 
 ## struct and unions
@@ -481,8 +478,8 @@ them within the scope of a function.
 Bitfields in structs are not supported.
 
 ## Linking with libraries
-Because picoc is an interpreter (and not a compiler) libraries must be linked
-with picoc itself. Also a glue module must be written to interface to picoc.
+Because itrapc is an interpreter (and not a compiler) libraries must be linked
+with itrapc itself. Also a glue module must be written to interface to itrapc.
 This is the same as other interpreters like python.
 
 If you're looking for an example check the interface to the C standard library
@@ -498,7 +495,7 @@ Some discussion on this topic:
 * http://www.cprogramming.com/tutorial/goto.html
 * http://kerneltrap.org/node/553/2131
 
-## History
+## PicoC History
 
 * Latest at https://github.com/robinrowe/picoc
 * 2024/4/9 forked from https://github.com/jpoirier/picoc

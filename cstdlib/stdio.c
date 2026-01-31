@@ -38,7 +38,7 @@ typedef struct StdOutStreamStruct
 
 } StdOutStream;
 
-/* our representation of varargs within picoc */
+/* our representation of varargs within itrapc */
 struct StdVararg
 {
     struct Value **Param;

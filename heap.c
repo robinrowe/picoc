@@ -1,4 +1,4 @@
-/* picoc heap memory allocation. */
+/* itrapc heap memory allocation. */
 
 /* stack grows up from the bottom and heap grows down from
     the top of heap space */

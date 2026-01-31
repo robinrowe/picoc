@@ -1,4 +1,4 @@
-/* picoc interactive debugger */
+/* itrapc interactive debugger */
 #include "interpreter.h"
 
 #define SHOWX

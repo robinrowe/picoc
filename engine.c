@@ -1,5 +1,5 @@
-/* picoc main program - this varies depending on your operating system and
- * how you're using picoc */
+/* itrapc main program - this varies depending on your operating system and
+ * how you're using itrapc */
 /* platform-dependent code for running programs is in this file */
 #if defined(UNIX_HOST) || defined(WIN32)
 #include <stdlib.h>
@@ -7,9 +7,9 @@
 #include <string.h>
 #endif
 
-/* include only picoc.h here - should be able to use it with only the
+/* include only engine.h here - should be able to use it with only the
     external interfaces, no internals from interpreter.h */
-#include "picoc.h"
+#include "engine.h"
 
 
 #if defined(UNIX_HOST) || defined(WIN32)
@@ -28,11 +28,11 @@ int main(int argc, char **argv)
     if (argc < 2 || strcmp(argv[ParamCount], "-h") == 0) {
         printf(PROGRAM_VERSION "  \n"
                "Format:\n\n"
-               "> picoc <file1.c>... [- <arg1>...]    : run a program, calls main() as the entry point\n"
-               "> picoc -s <file1.c>... [- <arg1>...] : run a script, runs the program without calling main()\n"
-               "> picoc -i                            : interactive mode, Ctrl+d to exit\n"
-               "> picoc -c                            : copyright info\n"
-               "> picoc -h                            : this help message\n");
+               "> itrapc <file1.c>... [- <arg1>...]    : run a program, calls main() as the entry point\n"
+               "> itrapc -s <file1.c>... [- <arg1>...] : run a script, runs the program without calling main()\n"
+               "> itrapc -i                            : interactive mode, Ctrl+d to exit\n"
+               "> itrapc -c                            : copyright info\n"
+               "> itrapc -h                            : this help message\n");
         return 0;
     }
 

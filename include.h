@@ -8,7 +8,7 @@ void IncludeRegister(Picoc *pc, const char *IncludeName,
     void (*SetupFunction)(Picoc *pc), struct LibraryFunction *FuncList,
     const char *SetupCSource);
 void IncludeFile(Picoc *pc, char *Filename);
-/* the following is defined in picoc.h:
+/* the following is defined in engine.h:
  * void PicocIncludeAllSystemHeaders(); */
 
 #ifdef DEBUGGER

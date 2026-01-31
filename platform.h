@@ -88,7 +88,7 @@ Mathematical properties - Primes minimize the chance that your hash function and
 extern jmp_buf ExitBuf;
 
 /* platform.h */
-/* the following are defined in picoc.h:
+/* the following are defined in engine.h:
  * void PicocCallMain(int argc, char **argv);
  * int PicocPlatformSetExitPoint();
  * void PicocInitialize(int StackSize);

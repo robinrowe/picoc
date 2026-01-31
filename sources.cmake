@@ -1,4 +1,5 @@
 README.md
+CMakeLists.txt
 sources.cmake
 LICENSE.h
 interpreter.h
@@ -8,12 +9,12 @@ heap.h
 include.h
 lex.h
 parse.h
-picoc.h
+engine.h
 platform.h
 table.h
 type.h
 variable.h
-picoc.h
+engine.h
 platform.h
 clibrary.c
 debug.c
@@ -22,7 +23,7 @@ heap.c
 include.c
 lex.c
 parse.c
-picoc.c
+engine.c
 platform.c
 table.c
 type.c

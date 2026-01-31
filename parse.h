@@ -1,5 +1,5 @@
 /* parse.h */
-/* the following are defined in picoc.h:
+/* the following are defined in engine.h:
  * void PicocParse(const char *FileName, const char *Source, int SourceLen, int RunIt, int CleanupNow, int CleanupSource);
  * void PicocParseInteractive(); */
 
@@ -11,7 +11,7 @@ typedef FILE IOFILE;
  
 /* parser state - has all this detail so we can parse nested files */
 struct ParseState {
-    struct Picoc *pc;                  /* the picoc instance this parser is a part of */
+    struct Picoc *pc;                  /* the itrapc instance this parser is a part of */
     const unsigned char *Pos;   /* the character position in the source text */
     char *FileName;             /* what file we're executing (registered string) */
     short int Line;             /* line number we're executing */

@@ -1,4 +1,4 @@
-/* picoc variable storage. This provides ways of defining and accessing
+/* itrapc variable storage. This provides ways of defining and accessing
  * variables */
 
 #include "interpreter.h"
