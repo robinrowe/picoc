@@ -6,6 +6,8 @@
 #include "type.h"
 #include "heap.h"
 #include "platform.h"
+#include "table.h"
+#include "expression.h"
 
 /* parse a block of code and return what mode it returned in */
 enum RunMode ParseBlock(ParseState *Parser, int AbsorbOpenBrace, int Condition)
@@ -139,10 +141,10 @@ void ParseWhileStatement(ParseState *Parser)
         ProgramFail(Parser, "'(' expected");
         
     ParserCopyPos(&PreConditional, Parser);
-    
+    int Condition = 0;
     do {
         ParserCopyPos(Parser, &PreConditional);
-        int Condition = ExpressionParseInt(Parser);
+        Condition = ExpressionParseInt(Parser);
         
         if (LexGetToken(Parser, NULL, true) != TokenCloseParen)
             ProgramFail(Parser, "')' expected");

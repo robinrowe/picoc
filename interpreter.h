@@ -7,8 +7,6 @@
 #include "platform.h"
 #include "parse.h"
 
-typedef struct Engine Engine;
-
 #ifndef NULL
 #define NULL 0
 #endif

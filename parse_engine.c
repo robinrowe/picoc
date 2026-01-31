@@ -4,6 +4,7 @@
 #include "lex.h"
 #include "heap.h"
 #include "platform.h"
+#include "table.h"
 
 /* quick scan a source file for definitions */
 void EngineParse(Engine *pc, const char *FileName, const char *Source,

@@ -5,6 +5,16 @@ clibrary.h
 debug.c
 expression.c
 expression.h
+expression_assign.c
+expression_assign.h
+expression_call.c
+expression_call.h
+expression_coerce.c
+expression_coerce.h
+expression_operator.c
+expression_operator.h
+expression_stack.c
+expression_stack.h
 heap.c
 heap.h
 include.c

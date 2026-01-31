@@ -2,14 +2,11 @@
 #ifndef PARSE_H
 #define PARSE_H
 
-#include "interpreter.h"
-
 /* Forward declarations */
 typedef struct Engine Engine;
 typedef struct ParseState ParseState;
 typedef struct Value Value;
 typedef struct ValueType ValueType;
-typedef FILE IOFILE;
 
 /* Parser state */
 struct ParseState {

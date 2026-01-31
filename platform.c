@@ -9,9 +9,9 @@ static void PrintSourceTextErrorLine(IOFILE *Stream, const char *FileName,
         const char *SourceText, int Line, int CharacterPos);
 
 #ifdef DEBUGGER
-static int gEnableDebugger = true;
+gEnableDebugger = true;
 #else
-static int gEnableDebugger = false;
+gEnableDebugger = false;
 #endif
 
 

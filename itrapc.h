@@ -7,13 +7,13 @@
 //#define PROGRAM_VERSION "v2.3.2"
 #define PROGRAM_VERSION "v1.0.0"
 #define PROGRAM_NAME "itrapc"
+typedef struct Engine Engine;
 
 #include "interpreter.h"
 
 /* this has to be a macro, otherwise errors will occur due to
 	the stack being corrupt */
 #define EnginePlatformSetExitPoint(pc) setjmp((pc)->EngineExitBuf)
-
 
 /* parse.c */
 extern void EngineParse(Engine *pc, const char *FileName, const char *Source,

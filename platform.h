@@ -24,7 +24,8 @@
 #else
 # error ***** A platform must be explicitly defined! *****
 #endif
-
+typedef FILE IOFILE;
+extern int gEnableDebugger;
 
 /* configurable options */
 /* select your host type (or do it in the Makefile):
