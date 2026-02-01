@@ -595,7 +595,7 @@ enum LexToken LexScanGetToken(Engine *pc, struct LexState *Lexer,
                     GotToken = TokenEllipsis;
                 } else {
                     /* It's .. (double dot) */
-                    GotToken = TokenDoubleDot;
+                    GotToken = TokenDotDot;
                 }
             } else {
                 GotToken = TokenDot;
@@ -612,7 +612,7 @@ enum LexToken LexScanGetToken(Engine *pc, struct LexState *Lexer,
 #else
             if (NextChar == ':') {
                 LEXER_INC(Lexer);
-                GotToken = TokenScopeRes;
+                GotToken = TokenScoper;
             } else {
                 GotToken = TokenColon;
             }
@@ -1217,7 +1217,7 @@ void PrintLexToken(enum LexToken token)
 		SHOW(TokenEllipsis);
 		SHOW(TokenLeftBrace);
 		SHOW(TokenRightBrace);
-        SHOW(TokenDoubleDot);
+        SHOW(TokenDotDot);
         SHOW(TokenScopeRes);
 		SHOW(TokenIntType);
 		SHOW(TokenCharType);

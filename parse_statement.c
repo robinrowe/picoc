@@ -38,10 +38,21 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
     switch (Token) {
     case TokenEOF:
         return ParseResultEOF;
+    case TokenDotDot:    
+    case TokenScoper:     
+        Token = LexGetToken(Parser, &LexerValue, true);
+        if(VariableGetDefined(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue,true)){
+            if (VarValue->Typ->Base == Type_Type) {
+                *Parser = PreState;
+                ParseDeclaration(Parser, Token);
+                CheckTrailingSemicolon = false;
+                break;
+            }
+        }
+        break;
     case TokenIdentifier:
         /* might be a typedef-typed variable declaration or an expression */
-        if (VariableDefined(Parser->pc, LexerValue->Val->Identifier)) {
-            VariableGet(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue);
+        if(VariableGetDefined(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue,false)){
             if (VarValue->Typ->Base == Type_Type) {
                 *Parser = PreState;
                 ParseDeclaration(Parser, Token);
@@ -153,15 +164,6 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
     case TokenDelete:
         ParseDeleteStatement(Parser, &LexerValue, &CValue);
         break;
-#ifndef NO_SCOPER
-    case TokenDoubleDot:    
-    case TokenScopeRes:     
-        *Parser = PreState;
-        ExpressionParse(Parser, &CValue);
-        if (Parser->Mode == RunModeRun)
-            VariableStackPop(Parser, CValue);
-        break;
-#endif
     default:
         *Parser = PreState;
         return ParseResultError;

@@ -407,8 +407,29 @@ int VariableDefined(Engine *pc, const char *Ident)
     return true;
 }
 
-#if 1
-// ORIGINAL:
+bool VariableGetDefined(Engine *pc, struct ParseState *Parser, const char *Ident,
+    struct Value **LVal, bool is_global)
+{
+    if (!is_global && pc->TopStackFrame != NULL) {
+        ShowX(">TableGet","LocalTable",Ident,0);
+        if (TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
+            return true;
+        }
+    }
+    
+    // Try global scope
+    if (TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
+        ShowX(">TableGet","GlobalTable",Ident,0);
+        return true;
+    }
+#if 0
+    if (VariableDefinedAndOutOfScope(pc, Ident))
+        ProgramFail(Parser, "'%s' is out of scope", Ident);
+    else
+        ProgramFail(Parser, "VariableGet Ident: '%s' is undefined", Ident);    
+#endif
+    return false;  // Not found
+}
 
 /* get the value of a variable. must be defined. Ident must be registered */
 void VariableGet(Engine *pc, struct ParseState *Parser, const char *Ident,
@@ -424,7 +445,24 @@ void VariableGet(Engine *pc, struct ParseState *Parser, const char *Ident,
         }
     }
 }
+
+#if 0
+/* Get variable from GLOBAL scope only - for ::bar syntax */
+void VariableGetGlobal(Engine *pc, struct ParseState *Parser, const char *Ident,
+    struct Value **LVal)
+{
+    if (TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
+        return true;  // Found in global scope
+    }
+    
+    // Not found in global scope - check if it's out of scope for better error
+    if (VariableDefinedAndOutOfScope(pc, Ident)) {
+        ProgramFail(Parser, "'%s' is out of scope", Ident);
+    }
+}
+
 #endif
+
 /* define a global variable shared with a platform global. Ident will be registered */
 void VariableDefinePlatformVar(Engine *pc, struct ParseState *Parser, char *Ident,
     struct ValueType *Typ, union AnyValue *FromValue, int IsWritable)

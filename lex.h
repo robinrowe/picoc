@@ -62,8 +62,8 @@ enum LexToken {
     TokenEllipsis,
     TokenLeftBrace,
     TokenRightBrace,
-    TokenDoubleDot,      /* .. operator (for global calls) */
-    TokenScopeRes,       /* :: operator (C++ scope resolution) */
+    TokenDotDot,      /* .. operator (for global calls) */
+    TokenScoper,       /* :: operator (C++ scope resolution) */
     TokenIntType,
     TokenCharType,
     TokenFloatType,

@@ -22,6 +22,8 @@ struct Value *VariableDefine(Engine *pc, struct ParseState *Parser,
 struct Value *VariableDefineButIgnoreIdentical(struct ParseState *Parser,
     char *Ident, struct ValueType *Typ, int IsStatic, int *FirstVisit);
 int VariableDefined(Engine *pc, const char *Ident);
+bool VariableGetDefined(Engine *pc, struct ParseState *Parser, const char *Ident,
+    struct Value **LVal, bool is_global);
 int VariableDefinedAndOutOfScope(Engine *pc, const char *Ident);
 void VariableRealloc(struct ParseState *Parser, struct Value *FromValue,
     int NewSize);

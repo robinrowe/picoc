@@ -802,7 +802,7 @@ char* GetMangleName(ParseState *Parser, ExpressionStack **StackTop,
     
     return mangle_name;
 }
-
+/* In expression_operator.c: */
 void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop, 
     Value *LexValue, int* PrefixState, int* Precedence, int* IgnorePrecedence)
 {
@@ -811,6 +811,13 @@ void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop,
     
     if (!*PrefixState)
         ProgramFail(Parser, "identifier not expected here");
+
+    /* Handle NULL parameters safely */
+    int localPrecedence = 0;
+    int localIgnorePrecedence = DEEP_PRECEDENCE;
+    
+    if (Precedence != NULL) localPrecedence = *Precedence;
+    if (IgnorePrecedence != NULL) localIgnorePrecedence = *IgnorePrecedence;
 
     /* Peek ahead to check for member function call pattern: var.method() */
     char* mangle_name = GetMangleName(Parser, StackTop, TokenName);
@@ -827,12 +834,13 @@ void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop,
         }
         
         /* Call the function with the mangled name */
-        ExpressionParseFunctionCall(Parser, StackTop, mangle_name,
-            Parser->Mode == RunModeRun && *Precedence < *IgnorePrecedence);
+        int shouldRun = Parser->Mode == RunModeRun && localPrecedence < localIgnorePrecedence;
+        ExpressionParseFunctionCall(Parser, StackTop, mangle_name, shouldRun);
         
-        *PrefixState = false;
-        if (*Precedence <= *IgnorePrecedence)
+        *PrefixState = 0;  /* false */
+        if (IgnorePrecedence != NULL && localPrecedence <= localIgnorePrecedence) {
             *IgnorePrecedence = DEEP_PRECEDENCE;
+        }
         return;  // Done handling member function call
     }
 
@@ -840,8 +848,8 @@ void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop,
     enum LexToken token = LexGetToken(Parser, NULL, false);
     if (token == TokenOpenParen) {
         /* Regular function call */
-        ExpressionParseFunctionCall(Parser, StackTop, TokenName,
-            Parser->Mode == RunModeRun && *Precedence < *IgnorePrecedence);
+        int shouldRun = Parser->Mode == RunModeRun && localPrecedence < localIgnorePrecedence;
+        ExpressionParseFunctionCall(Parser, StackTop, TokenName, shouldRun);
     } else {
         /* Variable reference */
         if (Parser->Mode == RunModeRun) {
@@ -861,7 +869,9 @@ void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop,
         }
     }
     
-    *PrefixState = false;
-    if (*Precedence <= *IgnorePrecedence)
+    *PrefixState = 0;  /* false */
+    if (IgnorePrecedence != NULL && localPrecedence <= localIgnorePrecedence) {
         *IgnorePrecedence = DEEP_PRECEDENCE;
+    }
 }
+

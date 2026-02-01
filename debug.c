@@ -150,8 +150,9 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 //	CHECK("Foo.fooMethod");
 //	CHECK("Foo"); 
 	CHECK("foo"); 
-	CHECK("__exit_value"); 
-	CHECK("main"); 
+//	CHECK("__exit_value");
+//  CHECK("bar");
+//	CHECK("main"); 
 	if(!show)
 	{	return;
 	}
