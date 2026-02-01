@@ -54,6 +54,8 @@ struct OpPrecedence OperatorPrecedence[] = {
     /* TokenRightSquareBracket, */ {0, 15, 0, "]"},
     /* TokenDot, */ {0, 0, 15, "."},
     /* TokenArrow, */ {0, 0, 15, "->"},
+    /* TokenDoubleDot, */ {14, 0, 0, ".."},
+    /* TokenScopeRes, */ {14, 0, 0, "::"},
     /* TokenOpenParen, */ {15, 0, 0, "("},
     /* TokenCloseParen, */ {0, 15, 0, ")"}
 };

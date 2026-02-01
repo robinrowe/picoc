@@ -1,5 +1,7 @@
 // test_dot_this.c
 
+/* Add support for the TrapC dot-this operator and also this-> and :: for C++ compatibility. */
+
 void Bar()
 {   puts("Bar");
 };
@@ -19,13 +21,17 @@ struct Foo
     void Bar()
     {   puts("FooBar");
     }
-    void BarGlobal()
-    {   ..Bar();
-    }
-    void BarScoper()
-    {   ::Bar();
-    }
+    void BarGlobal();
+    void BarScoper();
 };
+
+void Foo.BarGlobal()
+{   ..Bar();
+}
+
+void Foo::BarScoper();
+{   ::Bar();
+}
 
 int main()
 {   Foo foo;

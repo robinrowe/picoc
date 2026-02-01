@@ -93,6 +93,7 @@ static struct ReservedWord ReservedWords[] = {
     {"static", TokenStaticType},
     {"struct", TokenStructType},
     {"switch", TokenSwitch},
+    {"this", TokenIdentifier},  /* Not a keyword, but treat as identifier */
     {"typedef", TokenTypedef},
     {"union", TokenUnionType},
     {"unsigned", TokenUnsignedType},
@@ -582,14 +583,41 @@ enum LexToken LexScanGetToken(Engine *pc, struct LexState *Lexer,
             GotToken = TokenComma;
             break;
         case '.':
+#ifdef NO_DOT_THIS
             NEXTISEXACTLY3('.', '.', TokenEllipsis, TokenDot);
             break;
+#else
+            if (NextChar == '.') {
+                LEXER_INC(Lexer);  /* Skip first dot */
+                if (Lexer->Pos != Lexer->End && *Lexer->Pos == '.') {
+                    /* It's ... (ellipsis) */
+                    LEXER_INC(Lexer);
+                    GotToken = TokenEllipsis;
+                } else {
+                    /* It's .. (double dot) */
+                    GotToken = TokenDoubleDot;
+                }
+            } else {
+                GotToken = TokenDot;
+            }
+            break;
+#endif
         case '?':
             GotToken = TokenQuestionMark;
             break;
         case ':':
+#ifdef NO_SCOPER
             GotToken = TokenColon;
             break;
+#else
+            if (NextChar == ':') {
+                LEXER_INC(Lexer);
+                GotToken = TokenScopeRes;
+            } else {
+                GotToken = TokenColon;
+            }
+            break;
+#endif
 // XXX: line continuation feature
         case '\\':
             if (NextChar == ' ' || NextChar == '\n') {
@@ -945,111 +973,6 @@ void LexHashEndif(struct ParseState *Parser)
         Parser->HashIfEvaluateToLevel = Parser->HashIfLevel;
 }
 
-#if 0 /* useful for debug */
-void LexPrintToken(enum LexToken Token)
-{
-    char* TokenNames[] = {
-        /* 0x00 */  "None",
-        /* 0x01 */  "Comma",
-        /* 0x02 */  "Assign",
-                    "AddAssign",
-                    "SubtractAssign",
-                    "MultiplyAssign",
-                    "DivideAssign",
-                    "ModulusAssign",
-        /* 0x08 */  "ShiftLeftAssign",
-                    "ShiftRightAssign",
-                    "ArithmeticAndAssign",
-                    "ArithmeticOrAssign",
-                    "ArithmeticExorAssign",
-        /* 0x0d */  "QuestionMark",
-                    "Colon",
-        /* 0x0f */  "LogicalOr",
-        /* 0x10 */  "LogicalAnd",
-        /* 0x11 */  "ArithmeticOr",
-        /* 0x12 */  "ArithmeticExor",
-        /* 0x13 */  "Ampersand",
-        /* 0x14 */  "Equal",
-                    "NotEqual",
-        /* 0x16 */  "LessThan",
-                    "GreaterThan",
-                    "LessEqual",
-                    "GreaterEqual",
-        /* 0x1a */  "ShiftLeft",
-                    "ShiftRight",
-        /* 0x1c */  "Plus",
-                    "Minus",
-        /* 0x1e */  "Asterisk",
-                    "Slash",
-                    "Modulus",
-        /* 0x21 */  "Increment",
-                    "Decrement",
-                    "UnaryNot",
-                    "UnaryExor",
-                    "Sizeof",
-                    "Cast",
-        /* 0x27 */  "LeftSquareBracket",
-                    "RightSquareBracket",
-                    "Dot",
-                    "Arrow",
-        /* 0x2b */  "OpenBracket",
-                    "CloseBracket",
-        /* 0x2d */  "Identifier",
-                    "IntegerConstant",
-                    "FPConstant",
-                    "StringConstant",
-                    "CharacterConstant",
-        /* 0x32 */  "Semicolon",
-                    "Ellipsis",
-        /* 0x34 */  "LeftBrace",
-                    "RightBrace",
-        /* 0x36 */  "IntType",
-                    "CharType",
-                    "FloatType",
-                    "DoubleType",
-                    "VoidType",
-                    "EnumType",
-        /* 0x3c */  "LongType",
-                    "SignedType",
-                    "ShortType",
-                    "StaticType",
-                    "AutoType",
-                    "RegisterType",
-                    "ExternType",
-                    "StructType",
-                    "UnionType",
-                    "UnsignedType",
-                    "Typedef",
-        /* 0x46 */  "Continue",
-                    "Do",
-                    "Else",
-                    "For",
-                    "Goto",
-                    "If",
-                    "While",
-                    "Break",
-                    "Switch",
-                    "Case",
-                    "Default",
-                    "Return",
-        /* 0x52 */
-                    "HashDefine",
-                    "HashInclude",
-                    "HashIf",
-                    "HashIfdef",
-                    "HashIfndef",
-                    "HashElse",
-                    "HashEndif",
-        /* 0x59 */  "New",
-                    "Delete",
-        /* 0x5b */  "OpenMacroBracket",
-        /* 0x5c */  "EOF",
-                    "EndOfLine",
-                    "EndOfFunction"
-    };
-    printf("{%s}", TokenNames[Token]);
-}
-#endif
 
 /* get the next token given a parser state, pre-processing as we go */
 enum LexToken LexGetToken(struct ParseState *Parser, struct Value **Value,
@@ -1232,3 +1155,115 @@ void LexInteractiveStatementPrompt(Engine *pc)
 {
     pc->LexUseStatementPrompt = true;
 }
+
+//#define PRINT_TOKEN
+#ifdef PRINT_TOKEN
+
+#define SHOW(token) case token: printf("DEBUG: token = %s (%d)\n",#token,token); return
+
+void PrintLexToken(enum LexToken token)
+{	switch(token)
+	{	SHOW(TokenNone);
+		SHOW(TokenComma);
+		SHOW(TokenAssign);
+		SHOW(TokenAddAssign);
+		SHOW(TokenSubtractAssign);
+		SHOW(TokenMultiplyAssign);
+		SHOW(TokenDivideAssign);
+		SHOW(TokenModulusAssign);
+		SHOW(TokenShiftLeftAssign);
+		SHOW(TokenShiftRightAssign);
+		SHOW(TokenArithmeticAndAssign);
+		SHOW(TokenArithmeticOrAssign);
+		SHOW(TokenArithmeticExorAssign);
+		SHOW(TokenQuestionMark);
+		SHOW(TokenColon);
+		SHOW(TokenLogicalOr);
+		SHOW(TokenLogicalAnd);
+		SHOW(TokenArithmeticOr);
+		SHOW(TokenArithmeticExor);
+		SHOW(TokenAmpersand);
+		SHOW(TokenEqual);
+		SHOW(TokenNotEqual);
+		SHOW(TokenLessThan);
+		SHOW(TokenGreaterThan);
+		SHOW(TokenLessEqual);
+		SHOW(TokenGreaterEqual);
+		SHOW(TokenShiftLeft);
+		SHOW(TokenShiftRight);
+		SHOW(TokenPlus);
+		SHOW(TokenMinus);
+		SHOW(TokenAsterisk);
+		SHOW(TokenSlash);
+		SHOW(TokenModulus);
+		SHOW(TokenIncrement);
+		SHOW(TokenDecrement);
+		SHOW(TokenUnaryNot);
+		SHOW(TokenUnaryExor);
+		SHOW(TokenSizeof);
+		SHOW(TokenCast);
+		SHOW(TokenLeftSquareBracket);
+		SHOW(TokenRightSquareBracket);
+		SHOW(TokenDot);
+		SHOW(TokenArrow);
+		SHOW(TokenOpenParen);
+		SHOW(TokenCloseParen);
+		SHOW(TokenIdentifier);
+		SHOW(TokenIntegerConstant);
+		SHOW(TokenFPConstant);
+		SHOW(TokenStringConstant);
+		SHOW(TokenCharacterConstant);
+		SHOW(TokenSemicolon);
+		SHOW(TokenEllipsis);
+		SHOW(TokenLeftBrace);
+		SHOW(TokenRightBrace);
+        SHOW(TokenDoubleDot);
+        SHOW(TokenScopeRes);
+		SHOW(TokenIntType);
+		SHOW(TokenCharType);
+		SHOW(TokenFloatType);
+		SHOW(TokenDoubleType);
+		SHOW(TokenVoidType);
+		SHOW(TokenEnumType);
+		SHOW(TokenLongType);
+		SHOW(TokenSignedType);
+		SHOW(TokenShortType);
+		SHOW(TokenStaticType);
+		SHOW(TokenAutoType);
+		SHOW(TokenRegisterType);
+		SHOW(TokenExternType);
+		SHOW(TokenStructType);
+		SHOW(TokenUnionType);
+		SHOW(TokenUnsignedType);
+		SHOW(TokenTypedef);
+		SHOW(TokenContinue);
+		SHOW(TokenDo);
+		SHOW(TokenElse);
+		SHOW(TokenFor);
+		SHOW(TokenGoto);
+		SHOW(TokenIf);
+		SHOW(TokenWhile);
+		SHOW(TokenBreak);
+		SHOW(TokenSwitch);
+		SHOW(TokenCase);
+		SHOW(TokenDefault);
+		SHOW(TokenReturn);
+		SHOW(TokenHashDefine);
+		SHOW(TokenHashInclude);
+		SHOW(TokenHashIf);
+		SHOW(TokenHashIfdef);
+		SHOW(TokenHashIfndef);
+		SHOW(TokenHashElse);
+		SHOW(TokenHashEndif);
+		SHOW(TokenNew);
+		SHOW(TokenDelete);
+		SHOW(TokenOpenMacroBracket);
+		SHOW(TokenEOF);
+		SHOW(TokenEndOfLine);
+		SHOW(TokenEndOfFunction);
+		SHOW(TokenBackSlash);
+}	}
+#else
+void PrintLexToken(enum LexToken token)
+{}
+#endif

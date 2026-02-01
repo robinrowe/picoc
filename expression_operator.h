@@ -16,8 +16,6 @@ void ExpressionQuestionMarkOperator(ParseState *Parser,
     ExpressionStack **StackTop, Value *BottomValue, Value *TopValue);
 void ExpressionColonOperator(ParseState *Parser,
     ExpressionStack **StackTop, Value *BottomValue, Value *TopValue);
-
-/* Struct member access */
 void ExpressionGetStructElement(ParseState *Parser,
     ExpressionStack **StackTop, enum LexToken Token);
 
@@ -32,5 +30,13 @@ char* GetMangleName(ParseState *Parser, ExpressionStack **StackTop,
     const char *struct_name);
 void ParseTokenIdentifier(ParseState *Parser, ExpressionStack **StackTop, 
     Value *LexValue, int* PrefixState, int* Precedence, int* IgnorePrecedence);
+
+/* Operators for TrapC extensions */
+void ExpressionDotThisOperator(ParseState *Parser,
+    ExpressionStack **StackTop, const char *MemberName);
+void ExpressionScopeResolution(ParseState *Parser,
+    ExpressionStack **StackTop, const char *Identifier, int IsDoubleDot);
+void ExpressionThisArrow(ParseState *Parser,
+    ExpressionStack **StackTop, const char *MemberName);
 
 #endif /* EXPRESSION_OPERATOR_H */

@@ -153,11 +153,19 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
     case TokenDelete:
         ParseDeleteStatement(Parser, &LexerValue, &CValue);
         break;
+#ifndef NO_SCOPER
+    case TokenDoubleDot:    
+    case TokenScopeRes:     
+        *Parser = PreState;
+        ExpressionParse(Parser, &CValue);
+        if (Parser->Mode == RunModeRun)
+            VariableStackPop(Parser, CValue);
+        break;
+#endif
     default:
         *Parser = PreState;
         return ParseResultError;
     }
-
     if (CheckTrailingSemicolon) {
         if (LexGetToken(Parser, NULL, true) != TokenSemicolon)
             ProgramFail(Parser, "';' expected");
