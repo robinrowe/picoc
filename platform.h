@@ -97,6 +97,7 @@ extern jmp_buf ExitBuf;
  * void EngineCleanup();
  * void EnginePlatformScanFile(const char *FileName);
  * int EngineExitValue; */
+void PrintSourceLine(struct ParseState *Parser);
 void ProgramFail(struct ParseState *Parser, const char *Message, ...);
 void ProgramFailNoParser(Engine *pc, const char *Message, ...);
 void AssignFail(struct ParseState *Parser, const char *Format,

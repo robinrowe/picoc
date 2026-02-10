@@ -144,6 +144,11 @@ void PrintSourceTextErrorLine(IOFILE *Stream, const char *FileName,
     PlatformPrintf(Stream, "^\n%s:%d:%d ", FileName, Line, CharacterPos);
 }
 
+void PrintSourceLine(struct ParseState *Parser)
+{    PrintSourceTextErrorLine(Parser->pc->CStdOut, Parser->FileName,
+        Parser->SourceText, Parser->Line, Parser->CharacterPos);
+}
+
 /* exit with a message */
 void ProgramFail(struct ParseState *Parser, const char *Message, ...)
 {

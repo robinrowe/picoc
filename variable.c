@@ -408,15 +408,15 @@ int VariableDefined(Engine *pc, const char *Ident)
 }
 
 bool VariableGetDefined(Engine *pc, struct ParseState *Parser, const char *Ident,
-    struct Value **LVal, bool is_global)
-{
+    struct Value **LVal)
+{   const bool is_global = Parser->is_global;// set by TokenScoper
+    Parser->is_global = false;
     if (!is_global && pc->TopStackFrame != NULL) {
         ShowX(">TableGet","LocalTable",Ident,0);
         if (TableGet(&pc->TopStackFrame->LocalTable, Ident, LVal, NULL, NULL, NULL)) {
             return true;
         }
     }
-    
     // Try global scope
     if (TableGet(&pc->GlobalTable, Ident, LVal, NULL, NULL, NULL)) {
         ShowX(">TableGet","GlobalTable",Ident,0);

@@ -73,7 +73,7 @@ int IsTypeToken(ParseState *Parser, enum LexToken t, Value *LexValue)
 #if 0
         if (VariableDefined(Parser->pc, LexValue->Val->Pointer)) {
 #endif
-        if(VariableGetDefined(Parser->pc, Parser, LexValue->Val->Pointer, &VarValue,false)){
+        if(VariableGetDefined(Parser->pc, Parser, LexValue->Val->Pointer, &VarValue)){
              if (VarValue->Typ == &Parser->pc->TypeType)
                 return 1;
         }
@@ -129,7 +129,7 @@ static int HandleDotThisOperator(ParseState *Parser, ExpressionStack **StackTop,
         Value *ThisValue = NULL;
         
         /* Try to get 'this' from local variables */
-        VariableGetDefined(Parser->pc, Parser, "this", &ThisValue,false);
+        VariableGetDefined(Parser->pc, Parser, "this", &ThisValue);
         
         /* Check if 'this' is a pointer */
         if (ThisValue->Typ->Base != TypePointer) {

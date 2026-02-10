@@ -12,7 +12,7 @@ int main()
 {   struct Foo foo;
     bar = 1;
 	foo.bar = 2; 
-	printf("bar = %i, foo.bar = %i\n",bar,foo.bar);
 	::bar = 3;
+	printf("bar = %i, foo.bar = %i\n",bar,foo.bar);
     return 0;
 }

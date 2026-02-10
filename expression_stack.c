@@ -9,8 +9,8 @@
 /* show the contents of the expression stack */
 void ExpressionStackShow(Engine *pc, ExpressionStack *StackTop)
 {
-    printf("Expression stack [0x%lx,0x%lx]: ", 
-           (long)pc->HeapStackTop, (long)StackTop);
+    printf("Expression stack [0x%llx,0x%llx]: ", 
+           (intptr_t)pc->HeapStackTop, (intptr_t)StackTop);
 
     while (StackTop != NULL) {
         if (StackTop->Order == OrderNone) {
@@ -63,7 +63,7 @@ void ExpressionStackShow(Engine *pc, ExpressionStack *StackTop)
                 else if (StackTop->Val->Typ->FromType->Base == TypeChar)
                     printf("\"%s\":string", (char *)StackTop->Val->Val->Pointer);
                 else
-                    printf("ptr(0x%lx)", (long)StackTop->Val->Val->Pointer);
+                    printf("ptr(0x%llx)", (intptr_t)StackTop->Val->Val->Pointer);
                 break;
             case TypeArray:
                 printf("array");
@@ -85,7 +85,7 @@ void ExpressionStackShow(Engine *pc, ExpressionStack *StackTop)
                 printf("unknown");
                 break;
             }
-            printf("[0x%lx,0x%lx]", (long)StackTop, (long)StackTop->Val);
+            printf("[0x%llx,0x%llx]", (intptr_t)StackTop, (intptr_t)StackTop->Val);
         } else {
             /* it's an operator */
             printf("op='%s' %s %d", 
@@ -93,7 +93,7 @@ void ExpressionStackShow(Engine *pc, ExpressionStack *StackTop)
                    (StackTop->Order == OrderPrefix) ? "prefix" : 
                    ((StackTop->Order == OrderPostfix) ? "postfix" : "infix"),
                    StackTop->Precedence);
-            printf("[0x%lx]", (long)StackTop);
+            printf("[0x%llx]", (intptr_t)StackTop);
         }
 
         StackTop = StackTop->Next;
@@ -215,7 +215,7 @@ void ExpressionStackPushOperator(ParseState *Parser,
     StackNode->Op = Token;
     StackNode->Precedence = Precedence;
     *StackTop = StackNode;
-    
+    assert(Order);
 #ifdef FANCY_ERROR_MESSAGES
     StackNode->Line = Parser->Line;
     StackNode->CharacterPos = Parser->CharacterPos;
@@ -236,7 +236,7 @@ void ExpressionStackCollapse(ParseState *Parser,
     Value *BottomValue;
     ExpressionStack *TopStackNode = *StackTop;
     ExpressionStack *TopOperatorNode;
-
+    assert(StackTop);
 #ifdef DEBUG_EXPRESSIONS
     printf("ExpressionStackCollapse(%d):\n", Precedence);
     ExpressionStackShow(Parser->pc, *StackTop);
@@ -338,7 +338,9 @@ void ExpressionStackCollapse(ParseState *Parser,
             case OrderNone:
             default:
                 /* this should never happen */
-                assert(TopOperatorNode->Order != OrderNone);
+                if(TopOperatorNode->Order == OrderNone)
+                {   ProgramFail(Parser,"Parser logic error: TopOperatorNode->Order == OrderNone");
+                }
                 break;
             }
 

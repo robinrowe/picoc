@@ -39,20 +39,15 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
     case TokenEOF:
         return ParseResultEOF;
     case TokenDotDot:    
-    case TokenScoper:     
+    case TokenScoper:    
+        Parser->is_global = true;
         Token = LexGetToken(Parser, &LexerValue, true);
-        if(VariableGetDefined(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue,true)){
-            if (VarValue->Typ->Base == Type_Type) {
-                *Parser = PreState;
-                ParseDeclaration(Parser, Token);
-                CheckTrailingSemicolon = false;
-                break;
-            }
-        }
-        break;
+        if(Token != TokenIdentifier)
+              ProgramFail(Parser, "Global variable '%s' not defined", LexerValue->Val->Identifier);
+        LexGetToken(&PreState, &LexerValue, true);// eat scoper
+        // FALL THROUGH 
     case TokenIdentifier:
-        /* might be a typedef-typed variable declaration or an expression */
-        if(VariableGetDefined(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue,false)){
+    {   if(VariableGetDefined(Parser->pc, Parser, LexerValue->Val->Identifier, &VarValue)){
             if (VarValue->Typ->Base == Type_Type) {
                 *Parser = PreState;
                 ParseDeclaration(Parser, Token);
@@ -60,7 +55,7 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
                 break;
             }
         } else {
-            /* it might be a goto label */
+        /* it might be a goto label */
             enum LexToken NextToken = LexGetToken(Parser, NULL, false);
             if (NextToken == TokenColon) {
                 /* declare the identifier as a goto label */
@@ -71,7 +66,7 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
                 CheckTrailingSemicolon = false;
                 break;
             }
-        }
+    }   }
         /* fall through to expression */
     case TokenAsterisk:
     case TokenAmpersand:
@@ -169,7 +164,8 @@ enum ParseResult ParseStatement(ParseState *Parser, int CheckTrailingSemicolon)
         return ParseResultError;
     }
     if (CheckTrailingSemicolon) {
-        if (LexGetToken(Parser, NULL, true) != TokenSemicolon)
+        enum LexToken NextToken = LexGetToken(Parser, NULL, true);
+        if(NextToken != TokenSemicolon)
             ProgramFail(Parser, "';' expected");
     }
 

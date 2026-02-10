@@ -4,6 +4,26 @@
 
 #include "interpreter.h"
 
+//#define DEBUG_EXPRESSIONS
+/*
+ExpressionParse():
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionStackCollapse(3):
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionStackCollapse() finished
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionStackPushOperator()
+Expression stack [0x19550115ce0,0x19550115cc8]: op='=' infix 2[0x19550115cc8], value=0:int[0x19550115cb0,0x19550115c80]
+Expression stack [0x19550115d28,0x19550115d10]: value=1:long[0x19550115d10,0x19550115ce0], op='=' infix 2[0x19550115cc8], value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionStackCollapse(0):
+Expression stack [0x19550115d28,0x19550115d10]: value=1:long[0x19550115d10,0x19550115ce0], op='=' infix 2[0x19550115cc8], value=0:int[0x19550115cb0,0x19550115c80]
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionStackCollapse() finished
+Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]
+ExpressionParse() done
+*/
+
 /* Forward declarations */
 typedef struct Engine Engine;
 typedef struct ParseState ParseState;
@@ -74,5 +94,6 @@ void ExpressionParseMacroCall(ParseState *Parser,
 
 /* Utility functions */
 int IsTypeToken(ParseState *Parser, enum LexToken t, Value *LexValue);
+
 
 #endif /* EXPRESSION_H */

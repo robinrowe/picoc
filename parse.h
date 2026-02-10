@@ -23,6 +23,7 @@ struct ParseState {
     short int HashIfEvaluateToLevel;    /* last evaluated #if level */
     char DebugMode;                     /* debugging mode */
     int ScopeID;                        /* local variable scope tracking */
+    int is_global;
 };
 
 /* Result codes */

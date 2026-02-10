@@ -130,7 +130,7 @@ void DebugStep(void)
 
 #ifdef SHOWX
 
-#define CHECK(x) show |= !strcmp(word,x); show<<=1
+#define CHECK(x) show |= 0!=strstr(word,x); show<<=1
 
 void ShowX(const char* function,const char* table,const char* word,size_t length)
 {	char buffer[100];
@@ -138,7 +138,11 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 	{	return;
 	}
 	if(length)
-	{	memcpy(buffer,word,length);
+	{	const char* semi = strchr(word,';');
+        if(semi)
+        {   length = semi-word+1;
+        }
+        memcpy(buffer,word,length);
 		buffer[length] = 0;
 		word = buffer;
 	}
@@ -149,9 +153,9 @@ void ShowX(const char* function,const char* table,const char* word,size_t length
 	unsigned show = 0;
 //	CHECK("Foo.fooMethod");
 //	CHECK("Foo"); 
-	CHECK("foo"); 
+//	CHECK("foo"); 
 //	CHECK("__exit_value");
-//  CHECK("bar");
+    CHECK("bar");
 //	CHECK("main"); 
 	if(!show)
 	{	return;
