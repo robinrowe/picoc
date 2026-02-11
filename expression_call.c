@@ -6,6 +6,7 @@
 #include "lex.h"
 #include "parse.h"
 #include "heap.h"
+#include "expression_stack.h"
 
 /* do a parameterized macro call */
 void ExpressionParseMacroCall(ParseState *Parser,
@@ -98,15 +99,15 @@ void ExpressionParseFunctionCall(ParseState *Parser,
     Value *FuncValue = NULL;
     Value *Param;
     Value **ParamArray = NULL;
-    const char *is_member_function = 0;
+    const char *member_function_name = 0;
     Value *StructVar = 0;
     if (RunIt) {
         /* Check if FuncName contains a dot (member function call) */
-        is_member_function = strchr(FuncName, '.');
+        member_function_name = strchr(FuncName, '.');
         const char *LookupName = FuncName; 
         char MangledName[256];
         
-        if (is_member_function) {
+        if (member_function_name) {
             /* It's a member function call - struct is already on StackTop */
             if (*StackTop == NULL || (*StackTop)->Val == NULL)
                 ProgramFail(Parser, "internal error: expected struct on stack for member call");
@@ -116,7 +117,7 @@ void ExpressionParseFunctionCall(ParseState *Parser,
                 ProgramFail(Parser, "member functions can only be called on structs");
             
             /* Build mangled name: StructTypeName.MemberName */
-            const char *MemberName = is_member_function + 1;
+            const char *MemberName = member_function_name + 1;
             snprintf(MangledName, sizeof(MangledName), "%s.%s",
                      StructVar->Typ->Identifier, MemberName);
             LookupName = TableStrRegister(Parser->pc, MangledName, strlen(MangledName));
@@ -160,7 +161,7 @@ void ExpressionParseFunctionCall(ParseState *Parser,
     /* parse arguments */
     ArgCount = 0;
     do 
-    {   if (!ArgCount && is_member_function)
+    {   if (!ArgCount && member_function_name)
         {   puts("this set");
 #if 1
             ParamArray[0] = VariableAllocValueFromExistingData(Parser,
@@ -201,8 +202,8 @@ void ExpressionParseFunctionCall(ParseState *Parser,
     } while (Token != TokenCloseParen);
     
     if (RunIt) {
-        // int this_count = is_member_function != 0;
-        if(is_member_function)
+        // int this_count = member_function_name != 0;
+        if(member_function_name)
         {   ArgCount++;
         }
         /* run the function */
@@ -251,7 +252,7 @@ void ExpressionParseFunctionCall(ParseState *Parser,
                     ProgramFail(&FuncParser, "couldn't find goto label '%s'",
                         FuncParser.SearchGotoLabel);
             }
-            if(is_member_function)
+            if(member_function_name)
             {   puts(" member VariableFree(Parser)");
    //             VariableFree(Parser->pc, ParamArray[0]);
             }
@@ -270,94 +271,73 @@ void ExpressionParseFunctionCall(ParseState *Parser,
 
 static void PrepareFunctionExecution(ParseState *Parser,
     ExpressionStack **StackTop, const char *FuncName,
-    Value **FuncValue, const char **is_member_function,
-    Value **StructVar, Value **ReturnValue, Value ***ParamArray);
+    Value **FuncValue, Value **ReturnValue, Value ***ParamArray);
 static void ParseAndExecuteFunction(ParseState *Parser,
     ExpressionStack **StackTop, const char *FuncName, int RunIt,
     enum LexToken InitialToken, Value *FuncValue,
-    const char *is_member_function, Value *StructVar, 
-    Value **ParamArray, Value *ReturnValue);
+    Value **ParamArray, Value *ReturnValue,Value* StructVar);
 static void ExecuteUserDefinedFunction(ParseState *Parser,
     const char *FuncName, Value *FuncValue, Value **ParamArray,
-    int ArgCount, const char *is_member_function, Value *ReturnValue);
+    int ArgCount, Value *ReturnValue);
 
 /* do a function call */
 void ExpressionParseFunctionCall(ParseState *Parser,
     ExpressionStack **StackTop, const char *FuncName, int RunIt)
-{
-    enum RunMode OldMode = Parser->Mode;
+{   enum RunMode OldMode = Parser->Mode;
     enum LexToken Token = LexGetToken(Parser, NULL, true);    /* open bracket */
-    
     Value *FuncValue = NULL;
-    Value *StructVar = NULL;
-    const char *is_member_function = NULL;
     Value **ParamArray = NULL;
     Value *ReturnValue = NULL;
-    
+    Value *StructVar = NULL;
     if (RunIt) {
+        if(IsMemberFunction(FuncName))
+        {   if (*StackTop == NULL || (*StackTop)->Val == NULL)
+                ProgramFail(Parser, "internal error: expected struct on stack for member call");
+            StructVar = (*StackTop)->Val;
+            if (StructVar->Typ->Base != TypeStruct)
+                ProgramFail(Parser, "member functions can only be called on structs");
+#if 0
+        // pop expression stack:
+            if (*StackTop && (*StackTop)->Val == StructVar) {
+                ExpressionStack *node = *StackTop;
+                *StackTop = node->Next;
+                /* Free the stack node */
+                HeapPopStack(Parser->pc, node, 
+                    sizeof(ExpressionStack) + sizeof(Value) + 
+                    TypeStackSizeValue(StructVar));
+            }
+#endif
+        }
         PrepareFunctionExecution(Parser, StackTop, FuncName, &FuncValue, 
-                                &is_member_function, &StructVar, &ReturnValue, &ParamArray);
+            &ReturnValue, &ParamArray);
         if (!FuncValue) return; /* Macro was handled */
     } else {
         ExpressionPushInt(Parser, StackTop, 0);
         Parser->Mode = RunModeSkip;
     }
-    
     ParseAndExecuteFunction(Parser, StackTop, FuncName, RunIt, Token,
-                           FuncValue, is_member_function, StructVar, 
-                           ParamArray, ReturnValue);
-    
+        FuncValue, ParamArray, ReturnValue,StructVar);
     Parser->Mode = OldMode;
 }
 
 static void PrepareFunctionExecution(ParseState *Parser,
     ExpressionStack **StackTop, const char *FuncName,
-    Value **FuncValue, const char **is_member_function,
-    Value **StructVar, Value **ReturnValue, Value ***ParamArray)
-{
-    *is_member_function = strchr(FuncName, '.');
-    const char *LookupName = FuncName;
-    char MangledName[256];
-    Value *FuncValueLocal = NULL;
-    
-    if (*is_member_function) {
-        /* Handle member function lookup */
-        if (*StackTop == NULL || (*StackTop)->Val == NULL)
-            ProgramFail(Parser, "internal error: expected struct on stack for member call");
-        
-        *StructVar = (*StackTop)->Val;
-        if ((*StructVar)->Typ->Base != TypeStruct)
-            ProgramFail(Parser, "member functions can only be called on structs");
-        
-        /* Build mangled name: StructTypeName.MemberName */
-        const char *MemberName = *is_member_function + 1;
-        snprintf(MangledName, sizeof(MangledName), "%s.%s",
-                 (*StructVar)->Typ->Identifier, MemberName);
-        LookupName = TableStrRegister(Parser->pc, MangledName, strlen(MangledName));
-        
-#ifdef VERBOSE
-        printf("DEBUG: Member call %s -> mangled to %s\n", FuncName, LookupName);
-#endif
-    }
-    
+    Value **FuncValue, Value **ReturnValue, Value ***ParamArray)
+{   Value *FuncValueLocal = NULL;
     /* Lookup function in global table */
-    ShowX(">TableGet", "GlobalTable", LookupName, 0);
-    
-    if (!TableGet(&Parser->pc->GlobalTable, LookupName, &FuncValueLocal, NULL, NULL, NULL))
-        ProgramFail(Parser, "identifier '%s' is undefined", LookupName);
-        
+    ShowX(">TableGet", "GlobalTable", FuncName, 0);
+    if (!TableGet(&Parser->pc->GlobalTable, FuncName, &FuncValueLocal, NULL, NULL, NULL))
+        ProgramFail(Parser, "identifier '%s' is undefined", FuncName);
     if (FuncValueLocal->Typ->Base == TypeMacro) {
         /* this is actually a macro, not a function */
-        ExpressionParseMacroCall(Parser, StackTop, LookupName,
+        ExpressionParseMacroCall(Parser, StackTop, FuncName,
             &FuncValueLocal->Val->MacroDef);
         *FuncValue = NULL;
         return;
     }
-    
     if (FuncValueLocal->Typ->Base != TypeFunction)
         ProgramFail(Parser, "%t is not a function - can't call",
             FuncValueLocal->Typ);
-    
     /* Prepare function execution stack */
     ExpressionStackPushValueByType(Parser, StackTop,
         FuncValueLocal->Val->FuncDef.ReturnType);
@@ -367,31 +347,27 @@ static void PrepareFunctionExecution(ParseState *Parser,
         sizeof(Value*) * FuncValueLocal->Val->FuncDef.NumParams);
     if (*ParamArray == NULL)
         ProgramFail(Parser, "(ExpressionParseFunctionCall) out of memory");
-    
     *FuncValue = FuncValueLocal;
 }
 
 static void ParseAndExecuteFunction(ParseState *Parser,
     ExpressionStack **StackTop, const char *FuncName, int RunIt,
     enum LexToken InitialToken, Value *FuncValue,
-    const char *is_member_function, Value *StructVar, 
-    Value **ParamArray, Value *ReturnValue)
-{
-    int ArgCount = 0;
+    Value **ParamArray, Value *ReturnValue,Value* StructVar)
+{   int ArgCount = 0;
     enum LexToken Token = InitialToken;
-    
     /* Parse all arguments */
+    const int is_member_function = IsMemberFunction(FuncName);
     do {
         if (!ArgCount && is_member_function && RunIt) {
             /* Handle 'this' parameter for member functions */
-            puts("this set");
+            puts("Pass member function 'this'");
             ParamArray[0] = VariableAllocValueFromExistingData(Parser,
                 StructVar->Typ, (union AnyValue*) StructVar, 0, 0);
         } else if (RunIt && ArgCount < FuncValue->Val->FuncDef.NumParams) {
             ParamArray[ArgCount] = VariableAllocValueFromType(Parser->pc, Parser,
                 FuncValue->Val->FuncDef.ParamType[ArgCount], false, NULL, false);
         }
-        
         Value *Param;
         if (ExpressionParse(Parser, &Param)) {
             if (RunIt) {
@@ -415,20 +391,16 @@ static void ParseAndExecuteFunction(ParseState *Parser,
                 ProgramFail(Parser, "bad argument");
         }
     } while (Token != TokenCloseParen);
-    
     /* Execute the function if running */
     if (RunIt) {
         if (is_member_function) {
             ArgCount++;  /* Count 'this' parameter */
         }
-        
         if (ArgCount < FuncValue->Val->FuncDef.NumParams)
             ProgramFail(Parser, "not enough arguments to '%s'", FuncName);
-        
         if (FuncValue->Val->FuncDef.Intrinsic == NULL) {
             ExecuteUserDefinedFunction(Parser, FuncName, FuncValue, 
-                                      ParamArray, ArgCount, is_member_function,
-                                      ReturnValue);
+                 ParamArray, ArgCount, ReturnValue);
         } else {
             /* Intrinsic function call */
             FuncValue->Val->FuncDef.Intrinsic(Parser, ReturnValue, ParamArray, ArgCount);
@@ -439,38 +411,30 @@ static void ParseAndExecuteFunction(ParseState *Parser,
 
 static void ExecuteUserDefinedFunction(ParseState *Parser,
     const char *FuncName, Value *FuncValue, Value **ParamArray,
-    int ArgCount, const char *is_member_function, Value *ReturnValue)
-{
-    int OldScopeID = Parser->ScopeID;
+    int ArgCount, Value *ReturnValue)
+{   int OldScopeID = Parser->ScopeID;
     ParseState FuncParser;
-    
     if (FuncValue->Val->FuncDef.Body.Pos == NULL)
         ProgramFail(Parser,
             "ExpressionParseFunctionCall FuncName: '%s' is undefined",
             FuncName);
-            
     ParserCopy(&FuncParser, &FuncValue->Val->FuncDef.Body);
     VariableStackFrameAdd(Parser, FuncName,
         FuncValue->Val->FuncDef.Intrinsic ? FuncValue->Val->FuncDef.NumParams : 0);
     Parser->pc->TopStackFrame->NumParams = ArgCount;
     Parser->pc->TopStackFrame->ReturnValue = ReturnValue;
-    
     if (Parser->pc->StructType) {
         /* Function parameters should not go out of scope */
         Parser->ScopeID = -1;
     }
-    
     for (int Count = 0; Count < FuncValue->Val->FuncDef.NumParams; Count++) {
         VariableDefine(Parser->pc, Parser,
             FuncValue->Val->FuncDef.ParamName[Count], ParamArray[Count],
             NULL, true);
     }
-    
     Parser->ScopeID = OldScopeID;
-    
     if (ParseStatement(&FuncParser, true) != ParseResultOk)
         ProgramFail(&FuncParser, "function body expected");
-        
     if (FuncParser.Mode == RunModeRun &&
             FuncValue->Val->FuncDef.ReturnType != &Parser->pc->VoidType)
         ProgramFail(&FuncParser,
@@ -479,11 +443,6 @@ static void ExecuteUserDefinedFunction(ParseState *Parser,
     else if (FuncParser.Mode == RunModeGoto)
         ProgramFail(&FuncParser, "couldn't find goto label '%s'",
             FuncParser.SearchGotoLabel);
-    
-    if (is_member_function) {
-        puts(" member VariableFree(Parser)");
-    }
-    
     VariableStackFramePop(Parser);
 }
 

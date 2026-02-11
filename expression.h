@@ -4,7 +4,7 @@
 
 #include "interpreter.h"
 
-//#define DEBUG_EXPRESSIONS
+#define DEBUG_EXPRESSIONS
 /*
 ExpressionParse():
 Expression stack [0x19550115cc8,0x19550115cb0]: value=0:int[0x19550115cb0,0x19550115c80]

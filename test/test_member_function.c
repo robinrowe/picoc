@@ -16,6 +16,6 @@ int main()
 {   int x = 3;
     gbar(&x);
     struct Foo foo;
-   // foo.hello();// works if comment out this line
+    foo.hello();// works if comment out this line
     return 0;
 }

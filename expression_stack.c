@@ -339,7 +339,7 @@ void ExpressionStackCollapse(ParseState *Parser,
             default:
                 /* this should never happen */
                 if(TopOperatorNode->Order == OrderNone)
-                {   ProgramFail(Parser,"Parser logic error: TopOperatorNode->Order == OrderNone");
+                {   ProgramFail(Parser,"Error: Expression unbalanced stack has OrderNone");
                 }
                 break;
             }
